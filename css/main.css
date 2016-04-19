@@ -1,0 +1,23 @@
+#vlmArea {
+    width: 100px;
+    height: 100px;
+    border: 1px solid darkgray;
+    position: absolute;
+    left: 0px;
+    top: 0px;
+}
+#container {
+    position:absolute;
+    margin-left:25px;
+}
+#canvas {
+    position:absolute;
+    left: 0px;
+    top: 0px;
+    background-color: #333333;
+}
+#meter {
+    background-color: #333333;
+    position: absolute;
+    top: 210px;
+}
