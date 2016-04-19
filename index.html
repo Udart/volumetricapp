@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/html">
+<head>
+    <title>Web Audio API</title>
+    <script type="text/javascript" src="js/jquery-1.8.0.min.js"></script>
+    <script src="http://code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
+    <link rel="stylesheet" href="http:////code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
+    <style>
+      #vlmArea {
+            width: 100px;
+            height: 100px;
+            border: 1px solid darkgray;
+            position: absolute;
+            left: 0px;
+            top: 0px;
+      }
+        #container {
+            position:absolute;
+            margin-left:25px;
+        }
+        #canvas {
+            position:absolute;
+            left: 0px;
+            top: 0px;
+            background-color: #333333;
+        }
+        #meter {
+            background-color: #333333;
+            position: absolute;
+            top: 210px;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <canvas id="canvas"></canvas>
+        <div id="vlmArea">Drag with mouse</div>
+        <canvas id="meter" height="200"></canvas>
+    </div>
+ 
+    <script type="text/javascript">
+        //TO-DO
+        //Do logarithmic scaling
+        //http://stackoverflow.com/questions/35799286/get-logarithmic-bytefrequencydata-from-audio
+        // Globals
+        var audioContext;
+        var analyser;
+        var microphone;
+        var javascriptNode;
+
+        // get the context from the canvas to draw on
+        var canvasContext = $("#canvas").get()[0].getContext("2d");
+        var meterContext = $("#meter").get()[0].getContext("2d");
+
+        //Note that in the future (Chrome 47), MediaDevices.getUserMedia may be used instead
+        //https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia
+        navigator.webkitGetUserMedia({audio: true}, createAudioNodes,
+                function(err) {
+                    cosole.error(err);
+                }
+        )
+
+        $(document).ready(function() {
+            vlm.init();
+
+            $( "#vlmArea" ).resizable({
+                containment: $('canvas'),
+                handles: "all",
+                stop: function(event, ui) {
+                    var w = $(this).width();
+                    var h = $(this).height();
+                    console.log('w', w, "h", h); 
+                    //Size excluding the border
+                    vlmArea.width = w;
+                    vlmArea.height = h;
+                }
+ 
+            });
+            $( "#vlmArea" ).draggable({
+                containment: $('canvas'),
+                stop: function(event, ui){
+                    console.log(ui.position.top, ui.position.left)
+                    //position relative to the container
+                    vlmArea.position.left = ui.position.left;
+                    vlmArea.position.top = ui.position.top;
+                }
+           });
+
+            $( "body" ).click(function() {
+                console.log(freqArray);
+            });
+        });
+
+ //////////////////
+ 
+ // Our application
+ var vlm = {};
+ var vlmMeter = {};
+
+ vlm.init = function() {
+    vlmSpectrum.init();
+    vlmArea.init();
+ }
+
+//Object caontaining everything related to the incoming audio
+var vlmIn = {}
+
+//The drawing of the spectrum
+var vlmSpectrum = {
+    width: 1000,
+    height: 200
+}
+
+vlmSpectrum.init = function() {
+    $("#canvas").attr("width", vlmSpectrum.width);
+    $("#canvas").attr("height", vlmSpectrum.height);
+
+    // create a gradient for the fill
+    vlmSpectrum.gradient = canvasContext.createLinearGradient(0,0,0,vlmSpectrum.height);
+    vlmSpectrum.gradient.addColorStop(0,'#000000');
+    vlmSpectrum.gradient.addColorStop(0.25,'#ff0000');
+    vlmSpectrum.gradient.addColorStop(0.75,'#ffff00');
+    vlmSpectrum.gradient.addColorStop(1,'#ffffff');
+
+    vlmMeter.gradient = meterContext.createLinearGradient(0,0,0,$("#meter").attr("height"));
+    vlmMeter.gradient.addColorStop(0,'#000000');
+    vlmMeter.gradient.addColorStop(0.25,'#ff0000');
+    vlmMeter.gradient.addColorStop(0.75,'#ffff00');
+    vlmMeter.gradient.addColorStop(1,'#ffffff');
+
+    canvasContext.fillStyle=vlmSpectrum.gradient;
+}
+
+//The user selected area of the spectrum
+var vlmArea = {
+    width: vlmSpectrum.width,
+    height: vlmSpectrum.height,
+    position: {top: 0,left: 0}
+}
+
+vlmArea.init = function() {
+    $( "#vlmArea" ).width(vlmArea.width);
+    $( "#vlmArea" ).height(vlmArea.height);
+}
+///////////////////
+
+         function analyseAudio() {
+            // bincount is fftsize / 2
+            freqArray =  new Uint8Array(analyser.frequencyBinCount); //move this out of loop?
+            analyser.getByteFrequencyData(freqArray);
+            
+            //Draw the spectrum to the canvas
+            drawSpectrum(freqArray);
+        }
+
+        function createAudioNodes(stream) {
+            audioContext = new AudioContext();
+            analyser = audioContext.createAnalyser();
+            analyser.smoothingTimeConstant = 0.3;
+            //analyser.fftSize = 256;
+
+
+            microphone = audioContext.createMediaStreamSource(stream);
+            microphone.connect(analyser);
+            
+            microphone.connect(audioContext.destination); //Monitor audio
+
+             // setup a javascript node
+             // This will create a ScriptProcessor that is called whenever the 2048 frames have been sampled. Since our data is sampled at 44.1k, this function will be called approximately 21 times a second. 
+            javascriptNode = audioContext.createScriptProcessor(2048, 1, 1);
+            analyser.connect(javascriptNode);
+            javascriptNode.connect(audioContext.destination);
+
+            //COnnect function that analyses audio
+            javascriptNode.onaudioprocess = analyseAudio;
+        }
+
+        ///////////////////////////////////////////////
+
+        function getAverageVolume(array) {
+            var values = 0;
+            var average;
+     
+            var length = array.length;
+     
+            // get all the frequency amplitudes
+            for (var i = 0; i < length; i++) {
+                values += array[i];
+            }
+     
+            average = values / length;
+            return average;
+        }
+
+        function drawVolumeter(normVol, heightInPixels) {
+            // clear the current state
+            meterContext.clearRect(20, 0, 25, $("#meter").attr("height"));
+     
+            // set the fill style
+            meterContext.fillStyle=vlmSpectrum.gradient;
+            var top = heightInPixels-(normVol*heightInPixels);
+            // create the meters
+            meterContext.fillRect(20,top,25,heightInPixels);
+        }
+
+        function drawSpectrum(array) {
+            // clear the canvas
+            canvasContext.clearRect(0, 0, 1000, 325);
+
+            //console.log(array);
+
+            var sliceWidth = 2; //vlmSpectrum.width * 1.0 / analyser.frequencyBinCount;
+            var x = 0;
+            var meterCounter = 0;
+            var meterSum = 0;
+
+            for ( var i = 0; i < (array.length); i++ ){
+                    var value = array[i];
+ 
+                    var normV = value / 256.0;
+                    var y = vlmSpectrum.height - (normV * vlmSpectrum.height);
+
+                    //Calculate the volumeter
+                    var areaBottom = vlmArea.position.top+vlmArea.height;
+                    if (x >= vlmArea.position.left && 
+                            x+sliceWidth <= vlmArea.position.left + vlmArea.width &&
+                            y <= areaBottom
+                        ) {
+                        //Not working
+                        var add = 1-((y-vlmArea.position.top)/vlmArea.height);
+                        add = add > 1 ? 1 : add; //cap value at 1
+                        //console.log(add);
+                        meterSum += add;
+                        meterCounter++;
+                    }
+
+                    x += sliceWidth;
+
+                    //canvasContext.fillRect(bar.x,bar.y,bar.w,bar.h);
+                    canvasContext.fillRect(x, y, sliceWidth*0.8, vlmSpectrum.height)
+
+            }
+            var meterVol = meterSum * (1/meterCounter);
+            drawVolumeter(meterVol, 200);
+        }
+
+    </script>
+
+</body>
+</html>

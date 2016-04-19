@@ -1,0 +1,16 @@
+{
+  "name": "Audio",
+  "main": "index.html",
+  "chromium-args": "--enable-web-midi --enable-web-audio --allow-file-access-from-files",
+  "webkit": {
+    "plugin": true,
+    "node-remote": ""
+  },
+  "window": {
+    "frame": true,
+    "toolbar": true,
+    "width":1280,
+    "height":720,
+    "name": "index"
+  }
+}
