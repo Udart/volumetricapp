@@ -1,3 +1,52 @@
+body {
+    background: #222;
+    margin: 0;
+    overflow: hidden;
+    font-size:10px;
+    font-family: Verdana,sans-serif;
+    -webkit-user-select: none;
+    color: #aaa;
+}
+
+#spectrumContainer {
+    position:absolute;
+    margin-left:15px;
+    margin-top:15px;
+    top: 0px;
+    left: 100px;
+    background-color: #555;
+}
+
+#meterContainer {
+    position:absolute;
+    margin-left:15px;
+    margin-top:15px;
+    top: 215px;
+    left: 0px;
+    background-color: #555;
+    width: 113px;
+    height: 186px;
+    padding: 7px;
+}
+
+#outputContainer {
+    position:absolute;
+    margin-left:15px;
+    margin-top:15px;
+    top: 215px;
+    left: calc(113px + 30px);
+    background-color: #555;
+    width: 300px;
+    height: 186px;
+    padding: 7px;
+}
+
+#spectrumCanvas {
+    position:absolute;
+    left: 0px;
+    top: 0px;
+}
+
 #vlmArea {
     width: 100px;
     height: 100px;
@@ -5,19 +54,38 @@
     position: absolute;
     left: 0px;
     top: 0px;
+    background-color:rgba(255, 255, 255, 0.2);
+    color: #ffffff;
 }
-#container {
-    position:absolute;
-    margin-left:25px;
-}
-#canvas {
-    position:absolute;
-    left: 0px;
-    top: 0px;
-    background-color: #333333;
-}
+
 #meter {
-    background-color: #333333;
+    background-color: #222;
     position: absolute;
-    top: 210px;
+}
+.dialDiv {
+    position: absolute;
+    text-align: center;
+}
+
+#amplify {
+    left: 50px;
+}
+#lift {
+    left: 50px;
+    top: 108px;
+}
+
+#inputDialsContainer {
+    margin-top: 15px;
+    margin-left: 15px;
+    background-color: #555;
+    height: 186px;
+    width: 71px;
+    padding: 7px;
+}
+
+#zoomBass {
+}
+#smooth {
+    top: 108px;
 }

@@ -5,21 +5,46 @@
     <script type="text/javascript" src="js/jquery-1.8.0.min.js"></script>
     <script src="js/jquery-ui.js"></script>
     <script src="js/main.js"></script>
+    <script src="js/main.js"></script>
+    <script src="js/jquery.knob.min.js"></script>
     <link rel="stylesheet" href="css/jquery-ui.css">
     <link rel="stylesheet" href="css/main.css">
 </head>
 <body>
-    <div id="container">
-        <canvas id="canvas"></canvas>
-        <div id="vlmArea">Drag with mouse</div>
-        <canvas id="meter" height="200" width="50"></canvas>
+    <div id="inputDialsContainer">
+        <div id="zoomBass" class="dialDiv">
+            <input type="text" class="dial">
+            <div>Zoom</div>
+        </div>
+         <div id="smooth" class="dialDiv">
+            <input type="text" class="dial">
+            <div>Smooth</div>
+        </div>
     </div>
- 
+    <div id="spectrumContainer">
+        <canvas id="spectrumCanvas"></canvas>
+        <div id="vlmArea">Drag with mouse</div>
+    </div>
+    <div id="meterContainer">
+        <canvas id="meter"></canvas>
+       <div id="amplify" class="dialDiv">
+            <input type="text" class="dial">
+            <div>Amplify</div>
+        </div>
+       <div id="lift" class="dialDiv">
+            <input type="text" class="dial">
+            <div>Lift</div>
+        </div>
+    </div>
+    <div id="outputContainer">
+    </div>
+
+
     <script type="text/javascript">
 
         $(document).ready(function() {
             vlm.init();
-         });
+        });
 
     </script>
 

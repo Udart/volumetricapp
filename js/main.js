@@ -9,11 +9,14 @@ vlm.init = function() {
     vlmMeter.init();
  }
 
-vlm.getAverageVolume = function(array) {
+//zeroVal: what to return if empty array
+vlm.getAverageVolume = function(array, zeroVal) {
     var values = 0;
     var average;
 
     var length = array.length;
+    if (length == 0)
+        return zeroVal;
 
     // get all the frequency amplitudes
     for (var i = 0; i < length; i++) {
@@ -33,7 +36,8 @@ var vlmIn = {
     audioContext: null,
     analyser: null,
     microphone: null,
-    javascriptNode: null
+    javascriptNode: null,
+    timeSmooth: 0.3
 }
 
 vlmIn.init = function() {
@@ -45,17 +49,20 @@ vlmIn.init = function() {
 }
 
 vlmIn.analyseAudio = function() {
+    //Set the smoothing
+    vlmIn.analyser.smoothingTimeConstant = vlmIn.timeSmooth;
     // bincount is fftsize / 2
     vlmIn.analyser.getByteFrequencyData(vlmIn.freqArray);
     
     //Draw the spectrum to the canvas
     vlmSpectrum.drawSpectrum(vlmIn.freqArray);
+    //Draw the volumeter
+    vlmMeter.drawVolumeter();
 }
 
 vlmIn.createAudioNodes = function(stream) {
     vlmIn.audioContext = new AudioContext();
     vlmIn.analyser = vlmIn.audioContext.createAnalyser();
-    vlmIn.analyser.smoothingTimeConstant = 0.3;
     //analyser.fftSize = 256;
 
 
@@ -87,10 +94,13 @@ var vlmSpectrum = {
 }
 
 vlmSpectrum.init = function() {
-    $("#canvas").attr("width", vlmSpectrum.width);
-    $("#canvas").attr("height", vlmSpectrum.height);
+    $("#spectrumCanvas").attr("width", vlmSpectrum.width);
+    $("#spectrumCanvas").attr("height", vlmSpectrum.height);
+    $("#spectrumContainer").css("height", vlmSpectrum.height);
+    $("#spectrumContainer").css("width", vlmSpectrum.width);
 
-    vlmSpectrum.canvasContext = $("#canvas").get()[0].getContext("2d");
+
+    vlmSpectrum.canvasContext = $("#spectrumCanvas").get()[0].getContext("2d");
 
     // create a gradient for the fill
     vlmSpectrum.gradient = vlmSpectrum.canvasContext.createLinearGradient(0,0,0,vlmSpectrum.height);
@@ -100,6 +110,38 @@ vlmSpectrum.init = function() {
     vlmSpectrum.gradient.addColorStop(1,'#ffffff');
 
     vlmSpectrum.canvasContext.fillStyle=vlmSpectrum.gradient;
+
+    vlmSpectrum.initGui();
+}
+
+vlmSpectrum.initGui = function() {
+    var options = {
+        'min': 15,
+        'max': 50,
+        'displayInput': false,
+        'width': 70,
+        'height': 70,
+        'fgColor': "#ffff00",
+        'bgColor': "#222",
+        'angleArc': 340,
+        'change' : function (v) { vlmSpectrum.barWidth = v/10 }
+    };
+
+    $("#zoomBass .dial").knob(options);
+    $('#zoomBass .dial')
+    .val(20)
+    .trigger('change');
+
+    options.min = 0.0;
+    options.max = 1.0;
+    options.step = 0.01;
+    options.change = function (v) { vlmIn.timeSmooth = v }
+
+    $("#smooth .dial").knob(options);
+    $('#smooth .dial')
+    .val(vlmIn.timeSmooth)
+    .trigger('change');
+
 }
 
 vlmSpectrum.getNormFromAnalyser = function(analyserValue) {
@@ -136,8 +178,7 @@ vlmSpectrum.drawSpectrum = function(array) {
         vlmSpectrum.canvasContext.fillRect(x, y, vlmSpectrum.barWidth*0.8, vlmSpectrum.height)
 
     }
-    var meterVol = vlm.getAverageVolume(meterSum);
-    vlmMeter.drawVolumeter(meterVol);
+    vlmMeter.normVol = vlm.getAverageVolume(meterSum, 0);
 }
 
 
@@ -145,9 +186,9 @@ vlmSpectrum.drawSpectrum = function(array) {
 // The user selected area of the spectrum
 
 var vlmArea = {
-    width: vlmSpectrum.width,
-    height: vlmSpectrum.height,
-    position: {top: 0,left: 0}
+    width: vlmSpectrum.width/2,
+    height: vlmSpectrum.height/2,
+    position: {top: 10,left: 0}
 }
 
 vlmArea.init = function() {
@@ -155,12 +196,12 @@ vlmArea.init = function() {
     $( "#vlmArea" ).height(vlmArea.height);
 
     $( "#vlmArea" ).resizable({
-        containment: $('canvas'),
+        containment: $('#spectrumContainer'),
         handles: "all",
         stop: function(event, ui) {
             var w = $(this).width();
             var h = $(this).height();
-            console.log('w', w, "h", h); 
+            //console.log('w', w, "h", h); 
             //Size excluding the border
             vlmArea.width = w;
             vlmArea.height = h;
@@ -171,9 +212,9 @@ vlmArea.init = function() {
     });
 
     $( "#vlmArea" ).draggable({
-        containment: $('canvas'),
+        containment: $('#spectrumContainer'),
         stop: function(event, ui){
-            console.log(ui.position.top, ui.position.left)
+            //console.log(ui.position.top, ui.position.left)
             //position relative to the container
             vlmArea.position.left = ui.position.left;
             vlmArea.position.top = ui.position.top;
@@ -212,26 +253,85 @@ vlmArea.calculateAreaValue = function(spectrumBarY) {
 
 var vlmMeter = {
     meterContext: null,
-    heightInPixels: 200
+    width:25,
+    height: 200 -14,
+    normVol: 0, //Raw volume 0-1 range from the spectrum
+    amplifyValue: 1,
+    liftValue: 0.0,
+    outputVol: 0 //calculated with lift and amplify
 };
 
 vlmMeter.init = function() {
     vlmMeter.meterContext = $("#meter").get()[0].getContext("2d");
+    $("#meter").attr("width", vlmMeter.width);
+    $("#meter").attr("height", vlmMeter.height);    
+
     vlmMeter.gradient = vlmMeter.meterContext.createLinearGradient(0,0,0,$("#meter").attr("height"));
-    vlmMeter.gradient.addColorStop(0,'#000000');
+    vlmMeter.gradient.addColorStop(0,'#aa0000');
     vlmMeter.gradient.addColorStop(0.25,'#ff0000');
     vlmMeter.gradient.addColorStop(0.75,'#ffff00');
     vlmMeter.gradient.addColorStop(1,'#ffffff');
+
+    vlmMeter.initGui();
 }
 
-//normVol is a value in the 0-1 range
-vlmMeter.drawVolumeter = function(normVol) {
+vlmMeter.initGui = function() {
+    var options = {
+        'min': 0,
+        'max': 7,
+        'displayInput': false,
+        'width': 70,
+        'height': 70,
+        'fgColor': "#ffff00",
+        'bgColor': "#222",
+        'angleArc': 340,
+        'step': 0.01,
+       'change' : vlmMeter.onAmplifyChange
+    };
+
+    $("#amplify .dial").knob(options);
+    $('#amplify .dial')
+    .val(vlmMeter.amplifyValue)
+    .trigger('change');
+
+    options.min = 0;
+    options.max = 1;
+    options.change = vlmMeter.onLiftChange;
+
+    $("#lift .dial").knob(options);
+    $('#lift .dial')
+    .val(vlmMeter.liftValue)
+    .trigger('change');
+}
+
+vlmMeter.onAmplifyChange = function(v) {
+    vlmMeter.amplifyValue = v;
+}
+
+vlmMeter.onLiftChange = function(v) {
+    vlmMeter.liftValue = v;
+}
+
+vlmMeter.calcVolume = function() {
+    vlmMeter.outputVol = (vlmMeter.amplifyValue * vlmMeter.normVol) + vlmMeter.liftValue;
+    vlmMeter.outputVol = vlmMeter.outputVol > 1 ? 1 : vlmMeter.outputVol; //Cap value at 1
+}
+
+
+vlmMeter.drawVolumeter = function() {
+    vlmMeter.calcVolume();
+
     // clear the current state
-    vlmMeter.meterContext.clearRect(20, 0, 25, $("#meter").attr("height"));
+    vlmMeter.meterContext.clearRect(0, 0, 25, $("#meter").attr("height"));
 
     // set the fill style
     vlmMeter.meterContext.fillStyle=vlmSpectrum.gradient;
-    var top = vlmMeter.heightInPixels-(normVol*vlmMeter.heightInPixels);
+    var top = vlmMeter.height-(vlmMeter.outputVol*vlmMeter.height);
     // create the meters
-    vlmMeter.meterContext.fillRect(20,top,25,vlmMeter.heightInPixels);
+    vlmMeter.meterContext.fillRect(0,top,vlmMeter.width,vlmMeter.height);
+    //Draw 'lift' area
+    vlmMeter.meterContext.fillStyle = "#ffffff";
+    var liftTop = vlmMeter.height-(vlmMeter.liftValue*vlmMeter.height);
+    vlmMeter.meterContext.fillRect(0,liftTop,vlmMeter.width,vlmMeter.height);
+
 }
