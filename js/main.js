@@ -1,5 +1,11 @@
 ////////////////// VLM application ////////////////
  
+// To-do
+//Multiple outputs
+//Scrolling in spectrum
+//Inverse mode - go from 1 and down
+//Enable / disable midi and osc
+
 var vlm = {};
  
 vlm.init = function() {
@@ -8,7 +14,7 @@ vlm.init = function() {
     vlmArea.init();
     vlmMeter.init();
     vlmMidi.init();
-    //vlmOsc.init();
+    vlmOsc.init();
  }
 
 
@@ -61,7 +67,7 @@ vlmIn.analyseAudio = function() {
     vlmSpectrum.drawSpectrum(vlmIn.freqArray);
     vlmMeter.drawVolumeter();
     vlmMidi.sendMidiValue();
-    //vlmOsc.sendMessage();
+    vlmOsc.sendMessage();
 }
 
 vlmIn.createAudioNodes = function(stream) {
@@ -447,34 +453,56 @@ vlmMidi.setMidiValue = function() {
 
 ////////////////////////////////////
 
-// vlmOsc = {
-//     ip1: "127.0.0.1",
-//     port1: "8000",
-//     ip2: "192.168.1.12",
-//     port2: "1234",
-//     address: "volumetric",
-//     oscAPI: require('./omgosc.js'),
-//     sender: null,
-//     oscValue: 0
-// }
+vlmOsc = {
+    ip1: "127.0.0.1",
+    port1: "8000",
+    ip2: "192.168.1.12",
+    port2: "1234",
+    address: "/volumetric",
+    oscValue: 0
+}
 
-// vlmOsc.init = function() {
-//     vlmOsc.sender1 = new vlmOsc.oscAPI.UdpSender(vlmOsc.ip1, vlmOsc.port1);
-//     vlmOsc.sender2 = new vlmOsc.oscAPI.UdpSender(vlmOsc.ip2, vlmOsc.port2);
-// }
+vlmOsc.init = function() {
+    vlmOsc.oscMod = require('osc-min');
+    vlmOsc.dgramMod = require("dgram");
+    vlmOsc.udpMod = vlmOsc.dgramMod.createSocket("udp4");
 
-// vlmOsc.setOscValue = function() {
-//     vlmOsc.oscValue = vlmMeter.outputVol;
-// }
+    $("#oscIp1").val(vlmOsc.ip1);
+    $("#oscIp2").val(vlmOsc.ip2);
+    $("#oscPort1").val(vlmOsc.port1);
+    $("#oscPort2").val(vlmOsc.port2);
+    $("#oscAddress").val(vlmOsc.address);
 
-// vlmOsc.sendMessage = function(value) {
-//     vlmOsc.setOscValue();
+    $("#oscIp1").change(function() {
+        vlmOsc.ip1 = $(this).val();
+    });
+    $("#oscIp2").change(function() {
+        vlmOsc.ip2 = $(this).val();
+    });
+    $("#oscPort1").change(function() {
+        vlmOsc.port1 = $(this).val();
+    });
+    $("#oscPort2").change(function() {
+        vlmOsc.port2 = $(this).val();
+    });
+    $("#oscAddress").change(function() {
+        vlmOsc.address = $(this).val();
+    });
+;}
 
-//       //vlmOsc.sender1.send(vlmOsc.address,
-//       //            'f',
-//       //            [vlmOsc.oscValue]);
-//       vlmOsc.sender2.send(vlmOsc.address,
-//                   'f',
-//                   [Math.random()]);
-// }
+vlmOsc.setOscValue = function() {
+    vlmOsc.oscValue = vlmMeter.outputVol;
+    $("#oscValue").text(vlmOsc.oscValue.toFixed(2));
+}
+
+vlmOsc.sendMessage = function() {
+    vlmOsc.setOscValue();
+    var buf;
+    buf = vlmOsc.oscMod.toBuffer({
+        address: vlmOsc.address,
+        args: [vlmOsc.oscValue]
+    });
+    vlmOsc.udpMod.send(buf, 0, buf.length, vlmOsc.port1, vlmOsc.ip1);
+    vlmOsc.udpMod.send(buf, 0, buf.length, vlmOsc.port2, vlmOsc.ip2);
+}
 
