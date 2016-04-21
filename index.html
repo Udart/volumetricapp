@@ -8,6 +8,9 @@
     <script src="js/main.js"></script>
     <script src="js/jquery.knob.min.js"></script>
     <link rel="stylesheet" href="css/jquery-ui.css">
+    <link rel="stylesheet" href="css/jquery-ui.structure.css">
+    <link rel="stylesheet" href="css/jquery-ui.theme-dark-hive.css">
+
     <link rel="stylesheet" href="css/main.css">
 </head>
 <body>
@@ -36,7 +39,44 @@
             <div>Lift</div>
         </div>
     </div>
-    <div id="outputContainer">
+    <div id="midiContainer">
+        <select name="midiPorts" id="midiPorts"></select>
+        <table class="fieldsWLabels">
+            <tr>
+                <td>Midi channel:</td>  
+                <td><select name="midiChannels" id="midiChannels"></select></td>
+            </tr>
+            <tr>
+                <td>Midi CC:</td> 
+                <td><select name="midiCCs" id="midiCCs"></select></td>
+            </tr>
+        </table>
+        <div id="midiValue"></div>
+    </div>
+    <div id="oscContainer">
+         <table class="fieldsWLabels">
+            <tr>
+                <td>IP 1:</td>  
+                <td><input type="text" id="oscIp1" class="oscIp"></input></td>
+            </tr>
+            <tr>
+                <td>Port:</td>
+                <td><input type="text" id="oscPort1" class="oscPort"></td>
+            </tr>
+             <tr>
+                <td>IP 2:</td>  
+                <td><input type="text" id="oscIp2" class="oscIp"></input></td>
+            </tr>
+            <tr>
+                <td>Port:</td>
+                <td><input type="text" id="oscPort2" class="oscPort"></td>
+            </tr>
+            <tr>
+                <td>Address:</td>
+                <td><input type="text" id="oscAddress" class="oscAddress"></td>
+            </tr>
+       </table>
+       
     </div>
 
 

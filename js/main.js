@@ -7,7 +7,11 @@ vlm.init = function() {
     vlmSpectrum.init();
     vlmArea.init();
     vlmMeter.init();
+    vlmMidi.init();
+    //vlmOsc.init();
  }
+
+
 
 //zeroVal: what to return if empty array
 vlm.getAverageVolume = function(array, zeroVal) {
@@ -54,10 +58,10 @@ vlmIn.analyseAudio = function() {
     // bincount is fftsize / 2
     vlmIn.analyser.getByteFrequencyData(vlmIn.freqArray);
     
-    //Draw the spectrum to the canvas
     vlmSpectrum.drawSpectrum(vlmIn.freqArray);
-    //Draw the volumeter
     vlmMeter.drawVolumeter();
+    vlmMidi.sendMidiValue();
+    //vlmOsc.sendMessage();
 }
 
 vlmIn.createAudioNodes = function(stream) {
@@ -335,3 +339,142 @@ vlmMeter.drawVolumeter = function() {
     vlmMeter.meterContext.fillRect(0,liftTop,vlmMeter.width,vlmMeter.height);
 
 }
+
+//////////////////////////// Midi output //////////////////////////////////
+var vlmMidi = {
+    outPorts: ["No ports found. Connect an output and restart Volumetric"],
+    CC: 0,
+    channel: 1,
+    midiValue: 0,
+    port: 0,
+    midiSuccess: false
+};
+
+vlmMidi.init = function() {
+    vlmMidi.openConnection();
+    vlmMidi.buildChannelDropdown();
+    vlmMidi.buildCCDropdown();
+}
+
+vlmMidi.onMIDISuccess = function( midiAccess ) {
+    console.log( "MIDI ready!" );
+    vlmMidi.outPorts = vlmMidi.getOutputsList(midiAccess);
+    vlmMidi.updateDropdown();
+    vlmMidi.midiSuccess = true;
+ }
+
+ vlmMidi.getOutputsList = function(midiAccess) {
+    var outputs=midiAccess.outputs.values();
+    var returnOutputs = [];
+    for ( var output = outputs.next(); output && !output.done; output = outputs.next()){
+        returnOutputs.push(output.value);
+    }
+    return returnOutputs;
+}
+
+vlmMidi.openConnection = function() {
+    try {
+        navigator.requestMIDIAccess().then( vlmMidi.onMIDISuccess, vlmMidi.onMIDIFailure );
+    } catch(e) {
+        console.error(e);
+    }
+}
+
+vlmMidi.updateDropdown = function() {
+    $("#midiPorts").css("width", "130px");
+    $("#midiPorts").selectmenu();      
+
+    var output = [];
+    $.each(vlmMidi.outPorts, function(key, value)
+    {
+      output.push('<option value="'+ key +'">'+ value.name +'</option>');
+    });
+    $('#midiPorts').html(output.join(''));
+    $('#midiPorts').val(0);
+    $('#midiPorts').selectmenu("refresh");
+
+    $( "#midiPorts").on( "selectmenuchange", function() {
+        console.log("port change", $( this ).val());
+        vlmMidi.port = parseInt($( this ).val());
+    });
+}
+
+vlmMidi.buildChannelDropdown = function() {
+    var output = [];
+    for (var i = 1; i<=16; i++) {
+        output.push('<option value="'+ i +'">'+ i +'</option>');
+    }
+    $('#midiChannels').html(output.join(''));
+    $("#midiChannels").css("width","50px");
+    $("#midiChannels").selectmenu();      
+    $("#midiChannels").val(vlmMidi.channel);
+    $('#midiChannels').selectmenu("refresh");
+
+    $( "#midiChannels").on( "selectmenuchange", function() {
+        vlmMidi.channel = parseInt($( this ).val());
+    });
+}
+
+vlmMidi.buildCCDropdown = function() {
+    var output = [];
+    for (var i = 0; i<=127; i++) {
+        output.push('<option value="'+ i +'">'+ i +'</option>');
+    }
+    $('#midiCCs').html(output.join(''));
+    $("#midiCCs").css("width","50px");
+    $("#midiCCs").selectmenu();      
+    $("#midiCCs").val(vlmMidi.CC);
+    $('#midiCCs').selectmenu("refresh");
+
+    $( "#midiCCs").on( "selectmenuchange", function() {
+        vlmMidi.CC = parseInt($( this ).val());
+    });
+}
+
+vlmMidi.sendMidiValue = function() {
+    vlmMidi.setMidiValue();
+    if (vlmMidi.midiSuccess) {
+        var channel = vlmMidi.channel + 175;
+        var port = vlmMidi.outPorts[vlmMidi.port];
+        port.send([channel, vlmMidi.CC, vlmMidi.midiValue]);
+    }
+}
+
+vlmMidi.setMidiValue = function() {
+    vlmMidi.midiValue = Math.round(vlmMeter.outputVol * 127);
+    $("#midiValue").text(vlmMidi.midiValue);
+}
+
+////////////////////////////////////
+
+// vlmOsc = {
+//     ip1: "127.0.0.1",
+//     port1: "8000",
+//     ip2: "192.168.1.12",
+//     port2: "1234",
+//     address: "volumetric",
+//     oscAPI: require('./omgosc.js'),
+//     sender: null,
+//     oscValue: 0
+// }
+
+// vlmOsc.init = function() {
+//     vlmOsc.sender1 = new vlmOsc.oscAPI.UdpSender(vlmOsc.ip1, vlmOsc.port1);
+//     vlmOsc.sender2 = new vlmOsc.oscAPI.UdpSender(vlmOsc.ip2, vlmOsc.port2);
+// }
+
+// vlmOsc.setOscValue = function() {
+//     vlmOsc.oscValue = vlmMeter.outputVol;
+// }
+
+// vlmOsc.sendMessage = function(value) {
+//     vlmOsc.setOscValue();
+
+//       //vlmOsc.sender1.send(vlmOsc.address,
+//       //            'f',
+//       //            [vlmOsc.oscValue]);
+//       vlmOsc.sender2.send(vlmOsc.address,
+//                   'f',
+//                   [Math.random()]);
+// }
+
