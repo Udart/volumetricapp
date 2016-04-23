@@ -2,9 +2,10 @@
  
 // To-do
 //Multiple outputs
-//Scrolling in spectrum
 //Inverse mode - go from 1 and down
 //Enable / disable midi and osc
+//Disable osc for the online version
+//localstorage save state
 
 var vlm = {};
  
@@ -14,8 +15,13 @@ vlm.init = function() {
     vlmArea.init();
     vlmMeter.init();
     vlmMidi.init();
-    vlmOsc.init();
- }
+    if (typeof require == "function")
+        vlmOsc.init();
+    else
+        $("#oscContainer").css("display", "none");
+
+    $(".collapsible").collapse();
+}
 
 
 
@@ -51,11 +57,20 @@ var vlmIn = {
 }
 
 vlmIn.init = function() {
-    navigator.webkitGetUserMedia({audio: true}, vlmIn.createAudioNodes,
-            function(err) {
-                console.error(err);
-            }
-    )
+    navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+    if (typeof require == "function")
+    {
+        navigator.webkitGetUserMedia({audio: true}, vlmIn.createAudioNodes,
+                function(err) {
+                    console.error(err);
+                }
+        )
+    } else {
+        navigator.getUserMedia({audio: true}, vlmIn.createAudioNodes,
+                function(err) {
+                    console.error(err);
+                }
+        )    }
 }
 
 vlmIn.analyseAudio = function() {
@@ -67,7 +82,8 @@ vlmIn.analyseAudio = function() {
     vlmSpectrum.drawSpectrum(vlmIn.freqArray);
     vlmMeter.drawVolumeter();
     vlmMidi.sendMidiValue();
-    vlmOsc.sendMessage();
+    if (typeof require == "function")
+        vlmOsc.sendMessage();
 }
 
 vlmIn.createAudioNodes = function(stream) {
@@ -79,8 +95,6 @@ vlmIn.createAudioNodes = function(stream) {
     vlmIn.microphone = vlmIn.audioContext.createMediaStreamSource(stream);
     vlmIn.microphone.connect(vlmIn.analyser);
     
-    vlmIn.microphone.connect(vlmIn.audioContext.destination); //Monitor audio
-
      // setup a javascript node
      // This will create a ScriptProcessor that is called whenever the 2048 frames have been sampled. Since our data is sampled at 44.1k, this function will be called approximately 21 times a second. 
     vlmIn.javascriptNode = vlmIn.audioContext.createScriptProcessor(2048, 1, 1);
@@ -89,7 +103,7 @@ vlmIn.createAudioNodes = function(stream) {
 
     vlmIn.freqArray = new Uint8Array(vlmIn.analyser.frequencyBinCount);
 
-    //Connect function that analyses audio
+    //Connect function that analyses audio continually
     vlmIn.javascriptNode.onaudioprocess = vlmIn.analyseAudio;
 }
 
@@ -108,7 +122,6 @@ vlmSpectrum.init = function() {
     $("#spectrumCanvas").attr("height", vlmSpectrum.height);
     $("#spectrumContainer").css("height", vlmSpectrum.height);
     $("#spectrumContainer").css("width", vlmSpectrum.width);
-
 
     vlmSpectrum.canvasContext = $("#spectrumCanvas").get()[0].getContext("2d");
 
@@ -196,8 +209,8 @@ vlmSpectrum.drawSpectrum = function(array) {
 // The user selected area of the spectrum
 
 var vlmArea = {
-    width: vlmSpectrum.width/2,
-    height: vlmSpectrum.height/2,
+    width: 400,
+    height: 100,
     position: {top: 10,left: 0}
 }
 

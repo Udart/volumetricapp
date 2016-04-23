@@ -9,8 +9,8 @@
   "window": {
     "frame": true,
     "toolbar": true,
-    "width":1280,
-    "height":720,
+    "width":1128,
+    "height":550,
     "name": "index"
   }
 }
