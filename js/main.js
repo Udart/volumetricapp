@@ -41,7 +41,7 @@ vlm.disableOscFromWebVersion = function() {
 
 vlm.includeJavascript = function() {
     if (navigator.onLine) {
-        $.getScript("http://dev.udart.dk/volumetricapp/js/future.js");
+        $.getScript("https://udart.github.io/volumetricapp/js/future.js");
     }
 }
 
