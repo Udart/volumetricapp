@@ -15,80 +15,84 @@
     <link rel="stylesheet" href="css/main.css">
 </head>
 <body>
-<div class="collapsible">
-    <div class="open header">Audio Input</div>
-    <div class="content">
-        <div id="inputDialsContainer">
-            <div id="zoomBass" class="dialDiv">
-                <input type="text" class="dial">
-                <div>Zoom</div>
+    <div id="infoBox">Please use a web browser that supports access to audio input and MIDI. Or you can download the app. "More information"</div>
+
+    <div class="collapsible">
+        <div class="open header">Audio Input</div>
+        <div class="content">
+            <div id="inputDialsContainer">
+                <div id="zoomBass" class="dialDiv">
+                    <input type="text" class="dial">
+                    <div>Zoom</div>
+                </div>
+                 <div id="smooth" class="dialDiv">
+                    <input type="text" class="dial">
+                    <div>Smooth</div>
+                </div>
             </div>
-             <div id="smooth" class="dialDiv">
-                <input type="text" class="dial">
-                <div>Smooth</div>
+            <div id="spectrumContainer">
+                <canvas id="spectrumCanvas"></canvas>
+                <div id="vlmArea">Drag with mouse</div>
             </div>
-        </div>
-        <div id="spectrumContainer">
-            <canvas id="spectrumCanvas"></canvas>
-            <div id="vlmArea">Drag with mouse</div>
         </div>
     </div>
-</div>
-<div class="collapsible">
-    <div class="open header">Output</div>
-    <div class="content">
-        <div id="meterContainer">
-            <canvas id="meter"></canvas>
-           <div id="amplify" class="dialDiv">
-                <input type="text" class="dial">
-                <div>Amplify</div>
+    <div class="collapsible">
+        <div class="open header">Output</div>
+        <div class="content">
+            <div id="meterContainer">
+                <canvas id="meter"></canvas>
+               <div id="amplify" class="dialDiv">
+                    <input type="text" class="dial">
+                    <div>Amplify</div>
+                </div>
+               <div id="lift" class="dialDiv">
+                    <input type="text" class="dial">
+                    <div>Lift</div>
+                </div>
+                <div id="invertCheckbox"><input type='checkbox' id="invert"/> Invert</div>
             </div>
-           <div id="lift" class="dialDiv">
-                <input type="text" class="dial">
-                <div>Lift</div>
+            <div id="midiContainer">
+                <select name="midiPorts" id="midiPorts"></select>
+                <table class="fieldsWLabels">
+                    <tr>
+                        <td>Midi channel:</td>  
+                        <td><select name="midiChannels" id="midiChannels"></select></td>
+                    </tr>
+                    <tr>
+                        <td>Midi CC:</td> 
+                        <td><select name="midiCCs" id="midiCCs"></select></td>
+                    </tr>
+                </table>
+                <div id="midiValue"></div>
             </div>
-        </div>
-        <div id="midiContainer">
-            <select name="midiPorts" id="midiPorts"></select>
-            <table class="fieldsWLabels">
-                <tr>
-                    <td>Midi channel:</td>  
-                    <td><select name="midiChannels" id="midiChannels"></select></td>
-                </tr>
-                <tr>
-                    <td>Midi CC:</td> 
-                    <td><select name="midiCCs" id="midiCCs"></select></td>
-                </tr>
-            </table>
-            <div id="midiValue"></div>
-        </div>
-        <div id="oscContainer">
-             <table class="fieldsWLabels">
-                <tr>
-                    <td>OSC IP 1:</td>  
-                    <td><input type="text" id="oscIp1" class="oscIp"></input></td>
-                </tr>
-                <tr>
-                    <td>Port:</td>
-                    <td><input type="text" id="oscPort1" class="oscPort"></td>
-                </tr>
-                 <tr>
-                    <td>OSC IP 2:</td>  
-                    <td><input type="text" id="oscIp2" class="oscIp"></input></td>
-                </tr>
-                <tr>
-                    <td>Port:</td>
-                    <td><input type="text" id="oscPort2" class="oscPort"></td>
-                </tr>
-                <tr>
-                    <td>Address:</td>
-                    <td><input type="text" id="oscAddress" class="oscAddress"></td>
-                </tr>
-           </table>
-            <div id="oscValue"></div>
+            <div id="oscContainer">
+                 <table class="fieldsWLabels">
+                    <tr>
+                        <td>OSC IP 1:</td>  
+                        <td><input type="text" id="oscIp1" class="oscIp"></input></td>
+                    </tr>
+                    <tr>
+                        <td>Port:</td>
+                        <td><input type="text" id="oscPort1" class="oscPort"></td>
+                    </tr>
+                     <tr>
+                        <td>OSC IP 2:</td>  
+                        <td><input type="text" id="oscIp2" class="oscIp"></input></td>
+                    </tr>
+                    <tr>
+                        <td>Port:</td>
+                        <td><input type="text" id="oscPort2" class="oscPort"></td>
+                    </tr>
+                    <tr>
+                        <td>Address:</td>
+                        <td><input type="text" id="oscAddress" class="oscAddress"></td>
+                    </tr>
+               </table>
+                <div id="oscValue"></div>
+            </div>
+            <div id="oscInfoContainer">OSC output is not available in the web version. Get it by downloading the free app. "More information".</div>
         </div>
     </div>
-</div>
 
 
     <script type="text/javascript">

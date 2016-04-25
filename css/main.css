@@ -69,6 +69,19 @@ input {
     padding: 7px;
 }
 
+#oscInfoContainer {
+    display:none;
+    position:absolute;
+    margin-left:15px;
+    margin-top:15px;
+    top: 0px;
+    left: calc(113px + 30px + 130px + 30px);
+    background-color: #555;
+    width: 130px;
+    height: 186px;
+    padding: 7px;
+}
+
 #spectrumCanvas {
     position:absolute;
     left: 0px;
@@ -100,7 +113,13 @@ input {
 }
 #lift {
     left: 50px;
-    top: 108px;
+    top: 92px;
+}
+
+#invertCheckbox {
+    position:absolute;
+    left: 50px;
+    top: 177px;
 }
 
 #smooth {
@@ -157,4 +176,8 @@ input {
     font-size: 12px;
     text-decoration: none;
     margin-left: 15px;
+}
+
+#infoBox {
+    display: none;
 }

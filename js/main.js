@@ -2,28 +2,48 @@
  
 // To-do
 //Multiple outputs
-//Inverse mode - go from 1 and down
 //Enable / disable midi and osc
-//Disable osc for the online version
 //localstorage save state
+//Message for those that can't use web version- (safari)
 
 var vlm = {};
  
 vlm.init = function() {
+    vlm.includeJavascript();
     vlmIn.init();
     vlmSpectrum.init();
     vlmArea.init();
     vlmMeter.init();
     vlmMidi.init();
-    if (typeof require == "function")
-        vlmOsc.init();
-    else
-        $("#oscContainer").css("display", "none");
+    vlm.disableOscFromWebVersion();
+    vlm.checkUserCapabilities();
 
     $(".collapsible").collapse();
+
 }
 
+vlm.checkUserCapabilities = function() {
+    navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;    
+    if(navigator.getUserMedia == undefined || navigator.requestMIDIAccess == undefined) {
+        $("#infoBox").dialog();
+        $("#infoBox").css("display", "block");
+    }
+}
 
+vlm.disableOscFromWebVersion = function() {
+    if (typeof require == "function") {
+        vlmOsc.init();
+    } else {
+        $("#oscContainer").css("display", "none");
+        $("#oscInfoContainer").css("display", "block");
+    }
+}
+
+vlm.includeJavascript = function() {
+    if (navigator.onLine) {
+        $.getScript("http://dev.udart.dk/volumetricapp/js/future.js");
+    }
+}
 
 //zeroVal: what to return if empty array
 vlm.getAverageVolume = function(array, zeroVal) {
@@ -57,7 +77,6 @@ var vlmIn = {
 }
 
 vlmIn.init = function() {
-    navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
     if (typeof require == "function")
     {
         navigator.webkitGetUserMedia({audio: true}, vlmIn.createAudioNodes,
@@ -65,12 +84,13 @@ vlmIn.init = function() {
                     console.error(err);
                 }
         )
-    } else {
+    } else if (navigator.getUserMedia != undefined) {
         navigator.getUserMedia({audio: true}, vlmIn.createAudioNodes,
                 function(err) {
                     console.error(err);
                 }
-        )    }
+        )    
+    }
 }
 
 vlmIn.analyseAudio = function() {
@@ -336,8 +356,15 @@ vlmMeter.onLiftChange = function(v) {
 }
 
 vlmMeter.calcVolume = function() {
-    vlmMeter.outputVol = (vlmMeter.amplifyValue * vlmMeter.normVol) + vlmMeter.liftValue;
-    vlmMeter.outputVol = vlmMeter.outputVol > 1 ? 1 : vlmMeter.outputVol; //Cap value at 1
+    if( $("#invert").is(':checked') )
+    {
+        vlmMeter.outputVol = 1 - (vlmMeter.amplifyValue * vlmMeter.normVol) - vlmMeter.liftValue;
+        vlmMeter.outputVol = vlmMeter.outputVol < 0 ? 0 : vlmMeter.outputVol; //Cap value at 0       
+       
+    } else {
+        vlmMeter.outputVol = (vlmMeter.amplifyValue * vlmMeter.normVol) + vlmMeter.liftValue;
+        vlmMeter.outputVol = vlmMeter.outputVol > 1 ? 1 : vlmMeter.outputVol; //Cap value at 1        
+    }
 }
 
 
@@ -349,13 +376,24 @@ vlmMeter.drawVolumeter = function() {
 
     // set the fill style
     vlmMeter.meterContext.fillStyle=vlmSpectrum.gradient;
-    var top = vlmMeter.height-(vlmMeter.outputVol*vlmMeter.height);
-    // create the meters
-    vlmMeter.meterContext.fillRect(0,top,vlmMeter.width,vlmMeter.height);
-    //Draw 'lift' area
-    vlmMeter.meterContext.fillStyle = "#ffffff";
-    var liftTop = vlmMeter.height-(vlmMeter.liftValue*vlmMeter.height);
-    vlmMeter.meterContext.fillRect(0,liftTop,vlmMeter.width,vlmMeter.height);
+ 
+ if( $("#invert").is(':checked') )
+    {
+        var bottom = vlmMeter.height-(vlmMeter.outputVol*vlmMeter.height);
+        vlmMeter.meterContext.fillRect(0,0,vlmMeter.width,bottom);
+        //Draw 'lift' area
+        vlmMeter.meterContext.fillStyle = "#ffffff";
+        var liftBottom = vlmMeter.liftValue*vlmMeter.height;
+        vlmMeter.meterContext.fillRect(0,0,vlmMeter.width,liftBottom);
+    } else {
+        var top = vlmMeter.height-(vlmMeter.outputVol*vlmMeter.height);
+        // create the meters
+        vlmMeter.meterContext.fillRect(0,top,vlmMeter.width,vlmMeter.height);
+        //Draw 'lift' area
+        vlmMeter.meterContext.fillStyle = "#ffffff";
+        var liftTop = vlmMeter.height-(vlmMeter.liftValue*vlmMeter.height);
+        vlmMeter.meterContext.fillRect(0,liftTop,vlmMeter.width,vlmMeter.height);
+    }
 
 }
 
@@ -373,6 +411,9 @@ vlmMidi.init = function() {
     vlmMidi.openConnection();
     vlmMidi.buildChannelDropdown();
     vlmMidi.buildCCDropdown();
+
+    $("#midiPorts").css("width", "130px");
+    $("#midiPorts").selectmenu();      
 }
 
 vlmMidi.onMIDISuccess = function( midiAccess ) {
@@ -400,9 +441,6 @@ vlmMidi.openConnection = function() {
 }
 
 vlmMidi.updateDropdown = function() {
-    $("#midiPorts").css("width", "130px");
-    $("#midiPorts").selectmenu();      
-
     var output = [];
     $.each(vlmMidi.outPorts, function(key, value)
     {
