@@ -1,6 +1,7 @@
 ////////////////// VLM application ////////////////
  
 // To-do
+// Am I even sampling in stereo?
 //Multiple outputs
 //localstorage save state
 
@@ -417,9 +418,9 @@ var vlmMidi = {
 };
 
 vlmMidi.init = function() {
-    vlmMidi.openConnection();
-    vlmMidi.buildChannelDropdown();
-    vlmMidi.buildCCDropdown();
+    this.openConnection();
+    this.buildChannelDropdown();
+    this.buildCCDropdown();
 
     $("#midiPorts").css("width", "130px");
     $("#midiPorts").selectmenu();      
@@ -427,9 +428,9 @@ vlmMidi.init = function() {
 
 vlmMidi.onMIDISuccess = function( midiAccess ) {
     console.log( "MIDI ready!" );
-    vlmMidi.outPorts = vlmMidi.getOutputsList(midiAccess);
-    vlmMidi.updateDropdown();
-    vlmMidi.midiSuccess = true;
+    this.outPorts = this.getOutputsList(midiAccess);
+    this.updateDropdown();
+    this.midiSuccess = true;
  }
 
  vlmMidi.getOutputsList = function(midiAccess) {
@@ -443,15 +444,19 @@ vlmMidi.onMIDISuccess = function( midiAccess ) {
 
 vlmMidi.openConnection = function() {
     try {
-        navigator.requestMIDIAccess().then( vlmMidi.onMIDISuccess, vlmMidi.onMIDIFailure );
+        navigator.requestMIDIAccess().then( this.onMIDISuccess.bind(this), this.onMIDIFailure );
     } catch(e) {
         console.error(e);
     }
 }
 
+vlmMidi.onMIDIFailure = function(e) {
+    console.log(e);
+}
+
 vlmMidi.updateDropdown = function() {
     var output = [];
-    $.each(vlmMidi.outPorts, function(key, value)
+    $.each(this.outPorts, function(key, value)
     {
       output.push('<option value="'+ key +'">'+ value.name +'</option>');
     });
@@ -461,7 +466,7 @@ vlmMidi.updateDropdown = function() {
 
     $( "#midiPorts").on( "selectmenuchange", function() {
         console.log("port change", $( this ).val());
-        vlmMidi.port = parseInt($( this ).val());
+        this.port = parseInt($( this ).val());
     });
 }
 
@@ -473,15 +478,17 @@ vlmMidi.buildChannelDropdown = function() {
     $('#midiChannels').html(output.join(''));
     $("#midiChannels").css("width","50px");
     $("#midiChannels").selectmenu();      
-    $("#midiChannels").val(vlmMidi.channel);
+    $("#midiChannels").val(this.channel);
     $('#midiChannels').selectmenu("refresh");
 
     $( "#midiChannels").on( "selectmenuchange", function() {
-        vlmMidi.channel = parseInt($( this ).val());
+        this.channel = parseInt($( this ).val());
     });
 }
 
 vlmMidi.buildCCDropdown = function() {
+    vlmMidiObj = this;
+
     var output = [];
     for (var i = 0; i<=127; i++) {
         output.push('<option value="'+ i +'">'+ i +'</option>');
@@ -489,26 +496,26 @@ vlmMidi.buildCCDropdown = function() {
     $('#midiCCs').html(output.join(''));
     $("#midiCCs").css("width","50px");
     $("#midiCCs").selectmenu();      
-    $("#midiCCs").val(vlmMidi.CC);
+    $("#midiCCs").val(this.CC);
     $('#midiCCs').selectmenu("refresh");
 
     $( "#midiCCs").on( "selectmenuchange", function() {
-        vlmMidi.CC = parseInt($( this ).val());
+        vlmMidiObj.CC = parseInt($( this ).val());
     });
 }
 
 vlmMidi.sendMidiValue = function() {
-    vlmMidi.setMidiValue();
-    if (vlmMidi.midiSuccess) {
-        var channel = vlmMidi.channel + 175;
-        var port = vlmMidi.outPorts[vlmMidi.port];
-        port.send([channel, vlmMidi.CC, vlmMidi.midiValue]);
+    this.setMidiValue();
+    if (this.midiSuccess) {
+        var channel = this.channel + 175;
+        var port = this.outPorts[this.port];
+        port.send([channel, this.CC, this.midiValue]);
     }
 }
 
 vlmMidi.setMidiValue = function() {
-    vlmMidi.midiValue = Math.round(vlmMeter.outputVol * 127);
-    $("#midiValue").text(vlmMidi.midiValue);
+    this.midiValue = Math.round(vlmMeter.outputVol * 127);
+    $("#midiValue").text(this.midiValue);
 }
 
 ////////////////////////////////////
@@ -523,46 +530,48 @@ vlmOsc = {
 }
 
 vlmOsc.init = function() {
-    vlmOsc.oscMod = require('osc-min');
-    vlmOsc.dgramMod = require("dgram");
-    vlmOsc.udpMod = vlmOsc.dgramMod.createSocket("udp4");
+    vlmOscObj = this;
 
-    $("#oscIp1").val(vlmOsc.ip1);
-    $("#oscIp2").val(vlmOsc.ip2);
-    $("#oscPort1").val(vlmOsc.port1);
-    $("#oscPort2").val(vlmOsc.port2);
-    $("#oscAddress").val(vlmOsc.address);
+    this.oscMod = require('osc-min');
+    this.dgramMod = require("dgram");
+    this.udpMod = this.dgramMod.createSocket("udp4");
+
+    $("#oscIp1").val(this.ip1);
+    $("#oscIp2").val(this.ip2);
+    $("#oscPort1").val(this.port1);
+    $("#oscPort2").val(this.port2);
+    $("#oscAddress").val(this.address);
 
     $("#oscIp1").change(function() {
-        vlmOsc.ip1 = $(this).val();
+        vlmOscObj.ip1 = $(this).val();
     });
     $("#oscIp2").change(function() {
-        vlmOsc.ip2 = $(this).val();
+        vlmOscObj.ip2 = $(this).val();
     });
     $("#oscPort1").change(function() {
-        vlmOsc.port1 = $(this).val();
+        vlmOscObj.port1 = $(this).val();
     });
     $("#oscPort2").change(function() {
-        vlmOsc.port2 = $(this).val();
+        vlmOscObj.port2 = $(this).val();
     });
     $("#oscAddress").change(function() {
-        vlmOsc.address = $(this).val();
+        vlmOscObj.address = $(this).val();
     });
 ;}
 
 vlmOsc.setOscValue = function() {
-    vlmOsc.oscValue = vlmMeter.outputVol;
-    $("#oscValue").text(vlmOsc.oscValue.toFixed(2));
+    this.oscValue = vlmMeter.outputVol;
+    $("#oscValue").text(this.oscValue.toFixed(2));
 }
 
 vlmOsc.sendMessage = function() {
-    vlmOsc.setOscValue();
+    this.setOscValue();
     var buf;
-    buf = vlmOsc.oscMod.toBuffer({
-        address: vlmOsc.address,
-        args: [vlmOsc.oscValue]
+    buf = this.oscMod.toBuffer({
+        address: this.address,
+        args: [this.oscValue]
     });
-    vlmOsc.udpMod.send(buf, 0, buf.length, vlmOsc.port1, vlmOsc.ip1);
-    vlmOsc.udpMod.send(buf, 0, buf.length, vlmOsc.port2, vlmOsc.ip2);
+    this.udpMod.send(buf, 0, buf.length, this.port1, this.ip1);
+    this.udpMod.send(buf, 0, buf.length, this.port2, this.ip2);
 }
 
