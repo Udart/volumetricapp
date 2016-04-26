@@ -8,6 +8,10 @@ body {
     color: #aaa;
 }
 
+a, a:visited {
+    color:#fff;
+}
+
 input {
     background-color: #222;
     border-width: 0px;

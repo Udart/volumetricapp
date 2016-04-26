@@ -4,7 +4,6 @@
 //Multiple outputs
 //Enable / disable midi and osc
 //localstorage save state
-//Message for those that can't use web version- (safari)
 
 var vlm = {};
  
@@ -77,14 +76,15 @@ var vlmIn = {
 }
 
 vlmIn.init = function() {
-    if (typeof require == "function")
+    if (typeof require == "function" || navigator.webkitGetUserMedia != undefined)
     {
+
         navigator.webkitGetUserMedia({audio: true}, vlmIn.createAudioNodes,
                 function(err) {
                     console.error(err);
                 }
         )
-    } else if (navigator.getUserMedia != undefined) {
+   } else if (navigator.getUserMedia != undefined) {
         navigator.getUserMedia({audio: true}, vlmIn.createAudioNodes,
                 function(err) {
                     console.error(err);
