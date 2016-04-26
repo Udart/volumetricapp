@@ -2,20 +2,19 @@
  
 // To-do
 //Multiple outputs
-//Enable / disable midi and osc
 //localstorage save state
 
 var vlm = {};
  
 vlm.init = function() {
-    vlm.includeJavascript();
+    this.includeJavascript();
     vlmIn.init();
     vlmSpectrum.init();
     vlmArea.init();
     vlmMeter.init();
     vlmMidi.init();
-    vlm.disableOscFromWebVersion();
-    vlm.checkUserCapabilities();
+    this.disableOscFromWebVersion();
+    this.checkUserCapabilities();
 
     $(".collapsible").collapse();
 
@@ -76,30 +75,36 @@ var vlmIn = {
 }
 
 vlmIn.init = function() {
+    var vlmInObj = this;
     if (typeof require == "function" || navigator.webkitGetUserMedia != undefined)
     {
-
-        navigator.webkitGetUserMedia({audio: true}, vlmIn.createAudioNodes,
-                function(err) {
+        navigator.webkitGetUserMedia({audio: true}, 
+            function(stream) {
+                vlmInObj.createAudioNodes(stream)
+            },
+            function(err) {
                     console.error(err);
-                }
+            }
         )
    } else if (navigator.getUserMedia != undefined) {
-        navigator.getUserMedia({audio: true}, vlmIn.createAudioNodes,
-                function(err) {
+        navigator.getUserMedia({audio: true}, 
+            function(stream) {
+                vlmInObj.createAudioNodes(stream)
+            },
+           function(err) {
                     console.error(err);
-                }
-        )    
+            }
+        );
     }
 }
 
 vlmIn.analyseAudio = function() {
     //Set the smoothing
-    vlmIn.analyser.smoothingTimeConstant = vlmIn.timeSmooth;
+    this.analyser.smoothingTimeConstant = this.timeSmooth;
     // bincount is fftsize / 2
-    vlmIn.analyser.getByteFrequencyData(vlmIn.freqArray);
+    this.analyser.getByteFrequencyData(this.freqArray);
     
-    vlmSpectrum.drawSpectrum(vlmIn.freqArray);
+    vlmSpectrum.drawSpectrum(this.freqArray);
     vlmMeter.drawVolumeter();
     vlmMidi.sendMidiValue();
     if (typeof require == "function")
@@ -107,24 +112,24 @@ vlmIn.analyseAudio = function() {
 }
 
 vlmIn.createAudioNodes = function(stream) {
-    vlmIn.audioContext = new AudioContext();
-    vlmIn.analyser = vlmIn.audioContext.createAnalyser();
+    this.audioContext = new AudioContext();
+    this.analyser = this.audioContext.createAnalyser();
     //analyser.fftSize = 256;
 
 
-    vlmIn.microphone = vlmIn.audioContext.createMediaStreamSource(stream);
-    vlmIn.microphone.connect(vlmIn.analyser);
+    this.microphone = this.audioContext.createMediaStreamSource(stream);
+    this.microphone.connect(this.analyser);
     
      // setup a javascript node
      // This will create a ScriptProcessor that is called whenever the 2048 frames have been sampled. Since our data is sampled at 44.1k, this function will be called approximately 21 times a second. 
-    vlmIn.javascriptNode = vlmIn.audioContext.createScriptProcessor(2048, 1, 1);
-    vlmIn.analyser.connect(vlmIn.javascriptNode);
-    vlmIn.javascriptNode.connect(vlmIn.audioContext.destination);
+    this.javascriptNode = this.audioContext.createScriptProcessor(2048, 1, 1);
+    this.analyser.connect(this.javascriptNode);
+    this.javascriptNode.connect(this.audioContext.destination);
 
-    vlmIn.freqArray = new Uint8Array(vlmIn.analyser.frequencyBinCount);
+    this.freqArray = new Uint8Array(this.analyser.frequencyBinCount);
 
     //Connect function that analyses audio continually
-    vlmIn.javascriptNode.onaudioprocess = vlmIn.analyseAudio;
+    this.javascriptNode.onaudioprocess = this.analyseAudio.bind(this);
 }
 
 
