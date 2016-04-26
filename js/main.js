@@ -143,26 +143,28 @@ var vlmSpectrum = {
 }
 
 vlmSpectrum.init = function() {
-    $("#spectrumCanvas").attr("width", vlmSpectrum.width);
-    $("#spectrumCanvas").attr("height", vlmSpectrum.height);
-    $("#spectrumContainer").css("height", vlmSpectrum.height);
-    $("#spectrumContainer").css("width", vlmSpectrum.width);
+    $("#spectrumCanvas").attr("width", this.width);
+    $("#spectrumCanvas").attr("height", this.height);
+    $("#spectrumContainer").css("height", this.height);
+    $("#spectrumContainer").css("width", this.width);
 
-    vlmSpectrum.canvasContext = $("#spectrumCanvas").get()[0].getContext("2d");
+    this.canvasContext = $("#spectrumCanvas").get()[0].getContext("2d");
 
     // create a gradient for the fill
-    vlmSpectrum.gradient = vlmSpectrum.canvasContext.createLinearGradient(0,0,0,vlmSpectrum.height);
-    vlmSpectrum.gradient.addColorStop(0,'#000000');
-    vlmSpectrum.gradient.addColorStop(0.25,'#ff0000');
-    vlmSpectrum.gradient.addColorStop(0.75,'#ffff00');
-    vlmSpectrum.gradient.addColorStop(1,'#ffffff');
+    this.gradient = this.canvasContext.createLinearGradient(0,0,0,this.height);
+    this.gradient.addColorStop(0,'#000000');
+    this.gradient.addColorStop(0.25,'#ff0000');
+    this.gradient.addColorStop(0.75,'#ffff00');
+    this.gradient.addColorStop(1,'#ffffff');
 
-    vlmSpectrum.canvasContext.fillStyle=vlmSpectrum.gradient;
+    this.canvasContext.fillStyle=this.gradient;
 
-    vlmSpectrum.initGui();
+    this.initGui();
 }
 
 vlmSpectrum.initGui = function() {
+    vlmSpectrumObj = this;
+
     var options = {
         'min': 15,
         'max': 50,
@@ -172,7 +174,7 @@ vlmSpectrum.initGui = function() {
         'fgColor': "#ffff00",
         'bgColor': "#222",
         'angleArc': 340,
-        'change' : function (v) { vlmSpectrum.barWidth = v/10 }
+        'change' : function (v) { vlmSpectrumObj.barWidth = v/10 }
     };
 
     $("#zoomBass .dial").knob(options);
@@ -198,32 +200,32 @@ vlmSpectrum.getNormFromAnalyser = function(analyserValue) {
 
 vlmSpectrum.getYPosFromValue = function(analyserValue) {
     //Nomalize spectrum value
-    var normV = vlmSpectrum.getNormFromAnalyser(analyserValue);
+    var normV = this.getNormFromAnalyser(analyserValue);
     
     //Calculate y position - the top of the spectrum bar
-    return vlmSpectrum.height - (normV * vlmSpectrum.height);
+    return this.height - (normV * this.height);
 }
 
 // Draws spectrum and the output volumeter
 vlmSpectrum.drawSpectrum = function(array) {
     // clear the canvas
-    vlmSpectrum.canvasContext.clearRect(0, 0, 1000, 325);
+    this.canvasContext.clearRect(0, 0, 1000, 325);
 
     var x = 0;
     var meterSum = [];
 
     for ( var i = 0; i < (array.length); i++ ){
-        var y = vlmSpectrum.getYPosFromValue(array[i]);
+        var y = this.getYPosFromValue(array[i]);
 
         //Calculate the volumeter
-        if (vlmArea.barIsWithinArea(x, y, vlmSpectrum.barWidth)) {
+        if (vlmArea.barIsWithinArea(x, y, this.barWidth)) {
                 var add = vlmArea.calculateAreaValue(y);
                 meterSum.push(add);
         }
 
-        x += vlmSpectrum.barWidth;
+        x += this.barWidth;
 
-        vlmSpectrum.canvasContext.fillRect(x, y, vlmSpectrum.barWidth*0.8, vlmSpectrum.height)
+        this.canvasContext.fillRect(x, y, this.barWidth*0.8, this.height)
 
     }
     vlmMeter.normVol = vlm.getAverageVolume(meterSum, 0);
@@ -240,8 +242,10 @@ var vlmArea = {
 }
 
 vlmArea.init = function() {
-    $( "#vlmArea" ).width(vlmArea.width);
-    $( "#vlmArea" ).height(vlmArea.height);
+    vlmAreaObj = this;
+
+    $( "#vlmArea" ).width(vlmAreaObj.width);
+    $( "#vlmArea" ).height(vlmAreaObj.height);
 
     $( "#vlmArea" ).resizable({
         containment: $('#spectrumContainer'),
@@ -251,10 +255,10 @@ vlmArea.init = function() {
             var h = $(this).height();
             //console.log('w', w, "h", h); 
             //Size excluding the border
-            vlmArea.width = w;
-            vlmArea.height = h;
-            vlmArea.position.left = ui.position.left;
-            vlmArea.position.top = ui.position.top;
+            vlmAreaObj.width = w;
+            vlmAreaObj.height = h;
+            vlmAreaObj.position.left = ui.position.left;
+            vlmAreaObj.position.top = ui.position.top;
 
         }
     });
@@ -264,8 +268,8 @@ vlmArea.init = function() {
         stop: function(event, ui){
             //console.log(ui.position.top, ui.position.left)
             //position relative to the container
-            vlmArea.position.left = ui.position.left;
-            vlmArea.position.top = ui.position.top;
+            vlmAreaObj.position.left = ui.position.left;
+            vlmAreaObj.position.top = ui.position.top;
         }
    });
 }
@@ -274,9 +278,9 @@ vlmArea.init = function() {
 // sticking out above the top of the area, only that the bar is high enough
 // to stick into the area.
 vlmArea.barIsWithinArea = function(x, y, barWidth) {
-    var areaBottom = vlmArea.position.top+vlmArea.height;
-    if (x >= vlmArea.position.left && 
-        x+barWidth <= vlmArea.position.left + vlmArea.width &&
+    var areaBottom = this.position.top+this.height;
+    if (x >= this.position.left && 
+        x+barWidth <= this.position.left + this.width &&
         y <= areaBottom
     )
         return true;
@@ -290,7 +294,7 @@ vlmArea.barIsWithinArea = function(x, y, barWidth) {
 // Sometimes the y is sticking out of the top of the
 // area. In those cases we set the value to 1
 vlmArea.calculateAreaValue = function(spectrumBarY) {
-    var val = 1-((spectrumBarY-vlmArea.position.top)/vlmArea.height);
+    var val = 1-((spectrumBarY-this.position.top)/this.height);
     val = val > 1 ? 1 : val; //cap value at 1
     return val;
 }
@@ -310,17 +314,17 @@ var vlmMeter = {
 };
 
 vlmMeter.init = function() {
-    vlmMeter.meterContext = $("#meter").get()[0].getContext("2d");
-    $("#meter").attr("width", vlmMeter.width);
-    $("#meter").attr("height", vlmMeter.height);    
+    this.meterContext = $("#meter").get()[0].getContext("2d");
+    $("#meter").attr("width", this.width);
+    $("#meter").attr("height", this.height);    
 
-    vlmMeter.gradient = vlmMeter.meterContext.createLinearGradient(0,0,0,$("#meter").attr("height"));
-    vlmMeter.gradient.addColorStop(0,'#aa0000');
-    vlmMeter.gradient.addColorStop(0.25,'#ff0000');
-    vlmMeter.gradient.addColorStop(0.75,'#ffff00');
-    vlmMeter.gradient.addColorStop(1,'#ffffff');
+    this.gradient = this.meterContext.createLinearGradient(0,0,0,$("#meter").attr("height"));
+    this.gradient.addColorStop(0,'#aa0000');
+    this.gradient.addColorStop(0.25,'#ff0000');
+    this.gradient.addColorStop(0.75,'#ffff00');
+    this.gradient.addColorStop(1,'#ffffff');
 
-    vlmMeter.initGui();
+    this.initGui();
 }
 
 vlmMeter.initGui = function() {
@@ -334,70 +338,70 @@ vlmMeter.initGui = function() {
         'bgColor': "#222",
         'angleArc': 340,
         'step': 0.01,
-       'change' : vlmMeter.onAmplifyChange
+       'change' : this.onAmplifyChange.bind(this)
     };
 
     $("#amplify .dial").knob(options);
     $('#amplify .dial')
-    .val(vlmMeter.amplifyValue)
+    .val(this.amplifyValue)
     .trigger('change');
 
     options.min = 0;
     options.max = 1;
-    options.change = vlmMeter.onLiftChange;
+    options.change = this.onLiftChange.bind(this);
 
     $("#lift .dial").knob(options);
     $('#lift .dial')
-    .val(vlmMeter.liftValue)
+    .val(this.liftValue)
     .trigger('change');
 }
 
 vlmMeter.onAmplifyChange = function(v) {
-    vlmMeter.amplifyValue = v;
+    this.amplifyValue = v;
 }
 
 vlmMeter.onLiftChange = function(v) {
-    vlmMeter.liftValue = v;
+    this.liftValue = v;
 }
 
 vlmMeter.calcVolume = function() {
     if( $("#invert").is(':checked') )
     {
-        vlmMeter.outputVol = 1 - (vlmMeter.amplifyValue * vlmMeter.normVol) - vlmMeter.liftValue;
-        vlmMeter.outputVol = vlmMeter.outputVol < 0 ? 0 : vlmMeter.outputVol; //Cap value at 0       
+        this.outputVol = 1 - (this.amplifyValue * this.normVol) - this.liftValue;
+        this.outputVol = this.outputVol < 0 ? 0 : this.outputVol; //Cap value at 0       
        
     } else {
-        vlmMeter.outputVol = (vlmMeter.amplifyValue * vlmMeter.normVol) + vlmMeter.liftValue;
-        vlmMeter.outputVol = vlmMeter.outputVol > 1 ? 1 : vlmMeter.outputVol; //Cap value at 1        
+        this.outputVol = (this.amplifyValue * this.normVol) + this.liftValue;
+        this.outputVol = this.outputVol > 1 ? 1 : this.outputVol; //Cap value at 1        
     }
 }
 
 
 vlmMeter.drawVolumeter = function() {
-    vlmMeter.calcVolume();
+    this.calcVolume();
 
     // clear the current state
-    vlmMeter.meterContext.clearRect(0, 0, 25, $("#meter").attr("height"));
+    this.meterContext.clearRect(0, 0, 25, $("#meter").attr("height"));
 
     // set the fill style
-    vlmMeter.meterContext.fillStyle=vlmSpectrum.gradient;
+    this.meterContext.fillStyle=vlmSpectrum.gradient;
  
  if( $("#invert").is(':checked') )
     {
-        var bottom = vlmMeter.height-(vlmMeter.outputVol*vlmMeter.height);
-        vlmMeter.meterContext.fillRect(0,0,vlmMeter.width,bottom);
+        var bottom = this.height-(this.outputVol*this.height);
+        this.meterContext.fillRect(0,0,this.width,bottom);
         //Draw 'lift' area
-        vlmMeter.meterContext.fillStyle = "#ffffff";
-        var liftBottom = vlmMeter.liftValue*vlmMeter.height;
-        vlmMeter.meterContext.fillRect(0,0,vlmMeter.width,liftBottom);
+        this.meterContext.fillStyle = "#ffffff";
+        var liftBottom = this.liftValue*this.height;
+        this.meterContext.fillRect(0,0,this.width,liftBottom);
     } else {
-        var top = vlmMeter.height-(vlmMeter.outputVol*vlmMeter.height);
+        var top = this.height-(this.outputVol*this.height);
         // create the meters
-        vlmMeter.meterContext.fillRect(0,top,vlmMeter.width,vlmMeter.height);
+        this.meterContext.fillRect(0,top,this.width,this.height);
         //Draw 'lift' area
-        vlmMeter.meterContext.fillStyle = "#ffffff";
-        var liftTop = vlmMeter.height-(vlmMeter.liftValue*vlmMeter.height);
-        vlmMeter.meterContext.fillRect(0,liftTop,vlmMeter.width,vlmMeter.height);
+        this.meterContext.fillStyle = "#ffffff";
+        var liftTop = this.height-(this.liftValue*this.height);
+        this.meterContext.fillRect(0,liftTop,this.width,this.height);
     }
 
 }
