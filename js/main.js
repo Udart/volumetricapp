@@ -1,15 +1,14 @@
 ////////////////// VLM application ////////////////
  
 // To-do
-// Am I even sampling in stereo?
 //Multiple outputs
 //localstorage save state
 
-var vlm = {};
+var vlmApp = {};
  
-vlm.init = function() {
+vlmApp.init = function() {
     this.includeJavascript();
-    vlmIn.init();
+    vlmApp.audioIn.init();
     vlmSpectrum.init();
     vlmArea.init();
     vlmMeter.init();
@@ -21,7 +20,7 @@ vlm.init = function() {
 
 }
 
-vlm.checkUserCapabilities = function() {
+vlmApp.checkUserCapabilities = function() {
     navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;    
     if(navigator.getUserMedia == undefined || navigator.requestMIDIAccess == undefined) {
         $("#infoBox").dialog();
@@ -29,7 +28,7 @@ vlm.checkUserCapabilities = function() {
     }
 }
 
-vlm.disableOscFromWebVersion = function() {
+vlmApp.disableOscFromWebVersion = function() {
     if (typeof require == "function") {
         vlmOsc.init();
     } else {
@@ -38,14 +37,14 @@ vlm.disableOscFromWebVersion = function() {
     }
 }
 
-vlm.includeJavascript = function() {
+vlmApp.includeJavascript = function() {
     if (navigator.onLine) {
         $.getScript("https://udart.github.io/volumetricapp/js/future.js");
     }
 }
 
 //zeroVal: what to return if empty array
-vlm.getAverageVolume = function(array, zeroVal) {
+vlmApp.getAverageVolume = function(array, zeroVal) {
     var values = 0;
     var average;
 
@@ -63,11 +62,11 @@ vlm.getAverageVolume = function(array, zeroVal) {
 }
 
 
-////////////////// vlmIn //////////////////////////
+////////////////// vlmApp.audioIn //////////////////////////
 // Object caontaining everything related to the 
 // incoming audio
 
-var vlmIn = {
+vlmApp.audioIn = {
     audioContext: null,
     analyser: null,
     microphone: null,
@@ -75,13 +74,13 @@ var vlmIn = {
     timeSmooth: 0.3
 }
 
-vlmIn.init = function() {
-    var vlmInObj = this;
+vlmApp.audioIn.init = function() {
+    var audioInObj = this;
     if (typeof require == "function" || navigator.webkitGetUserMedia != undefined)
     {
         navigator.webkitGetUserMedia({audio: true}, 
             function(stream) {
-                vlmInObj.createAudioNodes(stream)
+                audioInObj.createAudioNodes(stream)
             },
             function(err) {
                     console.error(err);
@@ -90,7 +89,7 @@ vlmIn.init = function() {
    } else if (navigator.getUserMedia != undefined) {
         navigator.getUserMedia({audio: true}, 
             function(stream) {
-                vlmInObj.createAudioNodes(stream)
+                audioInObj.createAudioNodes(stream)
             },
            function(err) {
                     console.error(err);
@@ -99,7 +98,7 @@ vlmIn.init = function() {
     }
 }
 
-vlmIn.analyseAudio = function() {
+vlmApp.audioIn.analyseAudio = function() {
     //Set the smoothing
     this.analyser.smoothingTimeConstant = this.timeSmooth;
     // bincount is fftsize / 2
@@ -112,7 +111,7 @@ vlmIn.analyseAudio = function() {
         vlmOsc.sendMessage();
 }
 
-vlmIn.createAudioNodes = function(stream) {
+vlmApp.audioIn.createAudioNodes = function(stream) {
     this.audioContext = new AudioContext();
     this.analyser = this.audioContext.createAnalyser();
     //analyser.fftSize = 256;
@@ -186,11 +185,11 @@ vlmSpectrum.initGui = function() {
     options.min = 0.0;
     options.max = 1.0;
     options.step = 0.01;
-    options.change = function (v) { vlmIn.timeSmooth = v }
+    options.change = function (v) { vlmApp.audioIn.timeSmooth = v }
 
     $("#smooth .dial").knob(options);
     $('#smooth .dial')
-    .val(vlmIn.timeSmooth)
+    .val(vlmApp.audioIn.timeSmooth)
     .trigger('change');
 
 }
@@ -229,7 +228,7 @@ vlmSpectrum.drawSpectrum = function(array) {
         this.canvasContext.fillRect(x, y, this.barWidth*0.8, this.height)
 
     }
-    vlmMeter.normVol = vlm.getAverageVolume(meterSum, 0);
+    vlmMeter.normVol = vlmApp.getAverageVolume(meterSum, 0);
 }
 
 
