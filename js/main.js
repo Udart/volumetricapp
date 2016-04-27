@@ -8,12 +8,10 @@ var vlmApp = {};
  
 vlmApp.init = function() {
     this.includeJavascript();
-    vlmApp.audioIn.init();
-    vlmSpectrum.init();
-    vlmArea.init();
-    vlmMeter.init();
-    vlmMidi.init();
-    this.disableOscFromWebVersion();
+    this.audioIn.init();
+
+    this.obj = new vlmObject();
+
     this.checkUserCapabilities();
 
     $(".collapsible").collapse();
@@ -25,15 +23,6 @@ vlmApp.checkUserCapabilities = function() {
     if(navigator.getUserMedia == undefined || navigator.requestMIDIAccess == undefined) {
         $("#infoBox").dialog();
         $("#infoBox").css("display", "block");
-    }
-}
-
-vlmApp.disableOscFromWebVersion = function() {
-    if (typeof require == "function") {
-        vlmOsc.init();
-    } else {
-        $("#oscContainer").css("display", "none");
-        $("#oscInfoContainer").css("display", "block");
     }
 }
 
@@ -60,7 +49,6 @@ vlmApp.getAverageVolume = function(array, zeroVal) {
     average = values / length;
     return average;
 }
-
 
 ////////////////// vlmApp.audioIn //////////////////////////
 // Object caontaining everything related to the 
@@ -104,11 +92,11 @@ vlmApp.audioIn.analyseAudio = function() {
     // bincount is fftsize / 2
     this.analyser.getByteFrequencyData(this.freqArray);
     
-    vlmSpectrum.drawSpectrum(this.freqArray);
-    vlmMeter.drawVolumeter();
-    vlmMidi.sendMidiValue();
+    vlmApp.obj.spectrum.drawSpectrum(this.freqArray);
+    vlmApp.obj.meter.drawVolumeter();
+    vlmApp.obj.midi.sendMidiValue();
     if (typeof require == "function")
-        vlmOsc.sendMessage();
+        vlmApp.obj.osc.sendMessage();
 }
 
 vlmApp.audioIn.createAudioNodes = function(stream) {
@@ -132,17 +120,36 @@ vlmApp.audioIn.createAudioNodes = function(stream) {
     this.javascriptNode.onaudioprocess = this.analyseAudio.bind(this);
 }
 
+////////////////// vlmObj //////////////////////////////////
+// This object holds all the info regarding one instance of 
+// a group that holds the spectrum, the midi and osc outputs
+
+var vlmObject = function(enableOsc) {
+    this.spectrum = new vlmSpectrum(this);
+    this.area = new vlmArea(this);
+    this.meter = new vlmMeter(this);
+    this.midi = new vlmMidi(this);
+
+    this.disableOscFromWebVersion();
+}
+
+vlmObject.prototype.disableOscFromWebVersion = function() {
+    if (typeof require == "function") {
+        this.osc = new vlmOsc(this);
+    } else {
+        $("#oscContainer").css("display", "none");
+        $("#oscInfoContainer").css("display", "block");
+    }
+}
 
 ////////////////// vlmSpectrum //////////////////////////
 
-var vlmSpectrum = {
-    width: 1000,
-    height: 200,
-    canvasContext: null,
-    barWidth: 2
-}
+var vlmSpectrum = function(containerObj) {
+    this.obj = containerObj;
+    this.width = 1000;
+    this.height = 200;
+    this.barWidth = 2;
 
-vlmSpectrum.init = function() {
     $("#spectrumCanvas").attr("width", this.width);
     $("#spectrumCanvas").attr("height", this.height);
     $("#spectrumContainer").css("height", this.height);
@@ -162,8 +169,8 @@ vlmSpectrum.init = function() {
     this.initGui();
 }
 
-vlmSpectrum.initGui = function() {
-    vlmSpectrumObj = this;
+vlmSpectrum.prototype.initGui = function() {
+    var vlmSpectrumObj = this;
 
     var options = {
         'min': 15,
@@ -194,11 +201,11 @@ vlmSpectrum.initGui = function() {
 
 }
 
-vlmSpectrum.getNormFromAnalyser = function(analyserValue) {
+vlmSpectrum.prototype.getNormFromAnalyser = function(analyserValue) {
     return analyserValue / 256.0;
 }
 
-vlmSpectrum.getYPosFromValue = function(analyserValue) {
+vlmSpectrum.prototype.getYPosFromValue = function(analyserValue) {
     //Nomalize spectrum value
     var normV = this.getNormFromAnalyser(analyserValue);
     
@@ -207,7 +214,7 @@ vlmSpectrum.getYPosFromValue = function(analyserValue) {
 }
 
 // Draws spectrum and the output volumeter
-vlmSpectrum.drawSpectrum = function(array) {
+vlmSpectrum.prototype.drawSpectrum = function(array) {
     // clear the canvas
     this.canvasContext.clearRect(0, 0, 1000, 325);
 
@@ -218,8 +225,8 @@ vlmSpectrum.drawSpectrum = function(array) {
         var y = this.getYPosFromValue(array[i]);
 
         //Calculate the volumeter
-        if (vlmArea.barIsWithinArea(x, y, this.barWidth)) {
-                var add = vlmArea.calculateAreaValue(y);
+        if (this.obj.area.barIsWithinArea(x, y, this.barWidth)) {
+                var add = this.obj.area.calculateAreaValue(y);
                 meterSum.push(add);
         }
 
@@ -228,20 +235,19 @@ vlmSpectrum.drawSpectrum = function(array) {
         this.canvasContext.fillRect(x, y, this.barWidth*0.8, this.height)
 
     }
-    vlmMeter.normVol = vlmApp.getAverageVolume(meterSum, 0);
+    this.obj.meter.normVol = vlmApp.getAverageVolume(meterSum, 0);
 }
 
 
 ////////////////// vlmArea //////////////////////////
 // The user selected area of the spectrum
 
-var vlmArea = {
-    width: 400,
-    height: 100,
-    position: {top: 10,left: 0}
-}
+var vlmArea = function(containerObj) {
+    this.obj = containerObj;
+    this.width = 400;
+    this.height = 100;
+    this.position = {top: 10,left: 0};
 
-vlmArea.init = function() {
     vlmAreaObj = this;
 
     $( "#vlmArea" ).width(vlmAreaObj.width);
@@ -277,7 +283,7 @@ vlmArea.init = function() {
 // Note that we do not need to check if the spectrum bar is 
 // sticking out above the top of the area, only that the bar is high enough
 // to stick into the area.
-vlmArea.barIsWithinArea = function(x, y, barWidth) {
+vlmArea.prototype.barIsWithinArea = function(x, y, barWidth) {
     var areaBottom = this.position.top+this.height;
     if (x >= this.position.left && 
         x+barWidth <= this.position.left + this.width &&
@@ -293,7 +299,7 @@ vlmArea.barIsWithinArea = function(x, y, barWidth) {
 // within the selected area
 // Sometimes the y is sticking out of the top of the
 // area. In those cases we set the value to 1
-vlmArea.calculateAreaValue = function(spectrumBarY) {
+vlmArea.prototype.calculateAreaValue = function(spectrumBarY) {
     var val = 1-((spectrumBarY-this.position.top)/this.height);
     val = val > 1 ? 1 : val; //cap value at 1
     return val;
@@ -303,17 +309,15 @@ vlmArea.calculateAreaValue = function(spectrumBarY) {
 ////////////////// vlmMeter //////////////////////////
 // The output volume meter
 
-var vlmMeter = {
-    meterContext: null,
-    width:25,
-    height: 200 -14,
-    normVol: 0, //Raw volume 0-1 range from the spectrum
-    amplifyValue: 1,
-    liftValue: 0.0,
-    outputVol: 0 //calculated with lift and amplify
-};
+var vlmMeter = function(containerObj) {
+    this.obj = containerObj;
+    this.width = 25;
+    this.height = 200 -14;
+    this.normVol = 0; //Raw volume 0-1 range from the spectrum
+    this.amplifyValue = 1;
+    this.liftValue = 0.0;
+    this.outputVol = 0; //calculated with lift and amplify
 
-vlmMeter.init = function() {
     this.meterContext = $("#meter").get()[0].getContext("2d");
     $("#meter").attr("width", this.width);
     $("#meter").attr("height", this.height);    
@@ -327,7 +331,7 @@ vlmMeter.init = function() {
     this.initGui();
 }
 
-vlmMeter.initGui = function() {
+vlmMeter.prototype.initGui = function() {
     var options = {
         'min': 0,
         'max': 7,
@@ -356,15 +360,15 @@ vlmMeter.initGui = function() {
     .trigger('change');
 }
 
-vlmMeter.onAmplifyChange = function(v) {
+vlmMeter.prototype.onAmplifyChange = function(v) {
     this.amplifyValue = v;
 }
 
-vlmMeter.onLiftChange = function(v) {
+vlmMeter.prototype.onLiftChange = function(v) {
     this.liftValue = v;
 }
 
-vlmMeter.calcVolume = function() {
+vlmMeter.prototype.calcVolume = function() {
     if( $("#invert").is(':checked') )
     {
         this.outputVol = 1 - (this.amplifyValue * this.normVol) - this.liftValue;
@@ -377,14 +381,14 @@ vlmMeter.calcVolume = function() {
 }
 
 
-vlmMeter.drawVolumeter = function() {
+vlmMeter.prototype.drawVolumeter = function() {
     this.calcVolume();
 
     // clear the current state
     this.meterContext.clearRect(0, 0, 25, $("#meter").attr("height"));
 
     // set the fill style
-    this.meterContext.fillStyle=vlmSpectrum.gradient;
+    this.meterContext.fillStyle=this.obj.spectrum.gradient;
  
  if( $("#invert").is(':checked') )
     {
@@ -407,16 +411,15 @@ vlmMeter.drawVolumeter = function() {
 }
 
 //////////////////////////// Midi output //////////////////////////////////
-var vlmMidi = {
-    outPorts: ["No ports found. Connect an output and restart Volumetric"],
-    CC: 0,
-    channel: 1,
-    midiValue: 0,
-    port: 0,
-    midiSuccess: false
-};
+var vlmMidi = function(containerObj) {
+    this.obj = containerObj;
+    this.outPorts = ["No ports found. Connect an output and restart Volumetric"];
+    this.CC = 0;
+    this.channel = 1;
+    this.midiValue = 0;
+    this.port = 0;
+    this.midiSuccess = false;
 
-vlmMidi.init = function() {
     this.openConnection();
     this.buildChannelDropdown();
     this.buildCCDropdown();
@@ -425,14 +428,14 @@ vlmMidi.init = function() {
     $("#midiPorts").selectmenu();      
 }
 
-vlmMidi.onMIDISuccess = function( midiAccess ) {
+vlmMidi.prototype.onMIDISuccess = function( midiAccess ) {
     console.log( "MIDI ready!" );
     this.outPorts = this.getOutputsList(midiAccess);
     this.updateDropdown();
     this.midiSuccess = true;
  }
 
- vlmMidi.getOutputsList = function(midiAccess) {
+ vlmMidi.prototype.getOutputsList = function(midiAccess) {
     var outputs=midiAccess.outputs.values();
     var returnOutputs = [];
     for ( var output = outputs.next(); output && !output.done; output = outputs.next()){
@@ -441,7 +444,7 @@ vlmMidi.onMIDISuccess = function( midiAccess ) {
     return returnOutputs;
 }
 
-vlmMidi.openConnection = function() {
+vlmMidi.prototype.openConnection = function() {
     try {
         navigator.requestMIDIAccess().then( this.onMIDISuccess.bind(this), this.onMIDIFailure );
     } catch(e) {
@@ -449,11 +452,11 @@ vlmMidi.openConnection = function() {
     }
 }
 
-vlmMidi.onMIDIFailure = function(e) {
+vlmMidi.prototype.onMIDIFailure = function(e) {
     console.log(e);
 }
 
-vlmMidi.updateDropdown = function() {
+vlmMidi.prototype.updateDropdown = function() {
     var output = [];
     $.each(this.outPorts, function(key, value)
     {
@@ -469,7 +472,7 @@ vlmMidi.updateDropdown = function() {
     });
 }
 
-vlmMidi.buildChannelDropdown = function() {
+vlmMidi.prototype.buildChannelDropdown = function() {
     var output = [];
     for (var i = 1; i<=16; i++) {
         output.push('<option value="'+ i +'">'+ i +'</option>');
@@ -485,8 +488,8 @@ vlmMidi.buildChannelDropdown = function() {
     });
 }
 
-vlmMidi.buildCCDropdown = function() {
-    vlmMidiObj = this;
+vlmMidi.prototype.buildCCDropdown = function() {
+    var vlmMidiObj = this;
 
     var output = [];
     for (var i = 0; i<=127; i++) {
@@ -503,7 +506,7 @@ vlmMidi.buildCCDropdown = function() {
     });
 }
 
-vlmMidi.sendMidiValue = function() {
+vlmMidi.prototype.sendMidiValue = function() {
     this.setMidiValue();
     if (this.midiSuccess) {
         var channel = this.channel + 175;
@@ -512,24 +515,23 @@ vlmMidi.sendMidiValue = function() {
     }
 }
 
-vlmMidi.setMidiValue = function() {
-    this.midiValue = Math.round(vlmMeter.outputVol * 127);
+vlmMidi.prototype.setMidiValue = function() {
+    this.midiValue = Math.round(this.obj.meter.outputVol * 127);
     $("#midiValue").text(this.midiValue);
 }
 
 ////////////////////////////////////
 
-vlmOsc = {
-    ip1: "127.0.0.1",
-    port1: "8000",
-    ip2: "192.168.1.12",
-    port2: "1234",
-    address: "/volumetric",
-    oscValue: 0
-}
+vlmOsc = function(containerObj) {
+    this.obj = containerObj;
+    this.ip1 = "127.0.0.1";
+    this.port1 = "8000";
+    this.ip2 = "192.168.1.12";
+    this.port2 = "1234";
+    this.address = "/volumetric";
+    this.oscValue = 0;
 
-vlmOsc.init = function() {
-    vlmOscObj = this;
+    var vlmOscObj = this;
 
     this.oscMod = require('osc-min');
     this.dgramMod = require("dgram");
@@ -558,12 +560,12 @@ vlmOsc.init = function() {
     });
 ;}
 
-vlmOsc.setOscValue = function() {
-    this.oscValue = vlmMeter.outputVol;
+vlmOsc.prototype.setOscValue = function() {
+    this.oscValue = this.obj.meter.outputVol;
     $("#oscValue").text(this.oscValue.toFixed(2));
 }
 
-vlmOsc.sendMessage = function() {
+vlmOsc.prototype.sendMessage = function() {
     this.setOscValue();
     var buf;
     buf = this.oscMod.toBuffer({
