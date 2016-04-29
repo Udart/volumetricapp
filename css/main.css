@@ -185,3 +185,14 @@ input {
 #infoBox {
     display: none;
 }
+
+#plus {
+    width: 18px;
+    height: 18px;
+    background: url("images/plusminus.png") 0px 0px no-repeat;
+    margin-left: 15px;
+    margin-top: 15px;
+    padding-left: 24px;
+    padding-top: 2px;
+}
+

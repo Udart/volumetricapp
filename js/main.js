@@ -150,6 +150,15 @@ vlmObject.prototype.disableOscFromWebVersion = function() {
     }
 }
 
+vlmObject.prototype.createNewObjectHtml = function() {
+    $("body").append('<div id="object01"></div>');
+    var previousObjCssId = "#object00";//"#object" + vlmApp.padNum(this.index-1, 2);
+    console.log(previousObjCssId);
+    $(previousObjCssId).contents().clone().appendTo("#object01");
+
+    $(previousObjCssId).find("#plus").hide(); 
+}
+
 ////////////////// vlmSpectrum //////////////////////////
 
 var vlmSpectrum = function(containerObj) {
