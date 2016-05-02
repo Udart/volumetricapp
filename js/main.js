@@ -1,8 +1,8 @@
 ////////////////// VLM application ////////////////
  
 // To-do
-//Multiple outputs
 //localstorage save state
+// Don't delete object, just disable it? the midi, the osc, the drawing of the spectrum
 
 var vlmApp = {};
  
@@ -54,6 +54,15 @@ vlmApp.padNum = function(num, size) {
     return s.substr(s.length-size);
 }
 
+vlmApp.getLastEnabledObject = function() {
+    var enabledObject = 0;
+    for(var i = 0; i < vlmApp.objects.length; i++) {
+        if (vlmApp.objects[i].enabled)
+            enabledObject = i;
+    }
+    return enabledObject;
+}
+
 ////////////////// vlmApp.audioIn //////////////////////////
 // Object caontaining everything related to the 
 // incoming audio
@@ -96,11 +105,15 @@ vlmApp.audioIn.analyseAudio = function() {
     // bincount is fftsize / 2
     this.analyser.getByteFrequencyData(this.freqArray);
     
-    vlmApp.objects[0].spectrum.drawSpectrum(this.freqArray);
-    vlmApp.objects[0].meter.drawVolumeter();
-    vlmApp.objects[0].midi.sendMidiValue();
-    if (typeof require == "function")
-        vlmApp.objects[0].osc.sendMessage();
+    for (var i in vlmApp.objects) {
+        if (vlmApp.objects[i].enabled) {
+            vlmApp.objects[i].spectrum.drawSpectrum(this.freqArray);
+            vlmApp.objects[i].meter.drawVolumeter();
+            vlmApp.objects[i].midi.sendMidiValue();
+            if (typeof require == "function")
+                vlmApp.objects[i].osc.sendMessage();
+        }
+    }
 }
 
 vlmApp.audioIn.createAudioNodes = function(stream) {
@@ -129,16 +142,28 @@ vlmApp.audioIn.createAudioNodes = function(stream) {
 // a group that holds the spectrum, the midi and osc outputs
 
 var vlmObject = function(objectIndex) {
+    this.enabled = true;
     this.index = objectIndex;
     this.cssId = "#object" + vlmApp.padNum(this.index, 2);
+
+    //Create html code for the new object
+    this.createNewObjectHtml();
+
     this.spectrum = new vlmSpectrum(this);
     this.area = new vlmArea(this);
     this.meter = new vlmMeter(this);
     this.midi = new vlmMidi(this);
 
     this.disableOscFromWebVersion();
+    this.initGui();
+}
 
-    $(".collapsible").collapse();
+vlmObject.prototype.initGui = function() {
+    $(this.cssId).find(".collapsible").collapse();
+    $(this.cssId).find(".plusone").click(function() {
+        var newId = vlmApp.objects.length;        
+        vlmApp.objects.push(new vlmObject(newId));
+    });
 }
 
 vlmObject.prototype.disableOscFromWebVersion = function() {
@@ -150,13 +175,29 @@ vlmObject.prototype.disableOscFromWebVersion = function() {
     }
 }
 
+//All html is in a hidden div and a new object is created by copying
+// the contents of this div
 vlmObject.prototype.createNewObjectHtml = function() {
-    $("body").append('<div id="object01"></div>');
-    var previousObjCssId = "#object00";//"#object" + vlmApp.padNum(this.index-1, 2);
-    console.log(previousObjCssId);
-    $(previousObjCssId).contents().clone().appendTo("#object01");
+    var thisObject = this;
+    var htmlId = "object" + vlmApp.padNum(this.index, 2);
+    $("body").append('<div id="' + htmlId + '"></div>');
+    $("#originalObject").contents().clone().appendTo(this.cssId);
+    $(".plusone").hide();
+    $(this.cssId).find(".plusone").show(); 
+    if (this.index == 0) {
+        $(this.cssId).find("#close").hide();
+    }
 
-    $(previousObjCssId).find("#plus").hide(); 
+    //Close button
+    $(this.cssId).find("#close").click(function() {
+        //Remove object
+        thisObject.enabled = false;
+        $(thisObject.cssId).remove();
+        //Hide all plus signs then show the last one
+        $(".plusone").hide();
+        var lastObjectCssId = "#object" + vlmApp.padNum(vlmApp.getLastEnabledObject(),2);
+        $(lastObjectCssId).find(".plusone").show(); 
+    });
 }
 
 ////////////////// vlmSpectrum //////////////////////////
@@ -209,7 +250,11 @@ vlmSpectrum.prototype.initGui = function() {
     options.min = 0.0;
     options.max = 1.0;
     options.step = 0.01;
-    options.change = function (v) { vlmApp.audioIn.timeSmooth = v }
+    options.change = function (v) { 
+        vlmApp.audioIn.timeSmooth = v;
+        //Link all 'smooth' dials because we can only have one smooth value
+        $('#smooth .dial').val(vlmApp.audioIn.timeSmooth).trigger('change');
+    }
 
     $(this.obj.cssId).find("#smooth .dial").knob(options);
     $(this.obj.cssId).find('#smooth .dial')
@@ -265,7 +310,7 @@ var vlmArea = function(containerObj) {
     this.height = 100;
     this.position = {top: 10,left: 0};
 
-    vlmAreaObj = this;
+    var vlmAreaObj = this;
 
     $(this.obj.cssId).find( "#vlmArea" ).width(vlmAreaObj.width);
     $(this.obj.cssId).find( "#vlmArea" ).height(vlmAreaObj.height);
@@ -282,7 +327,6 @@ var vlmArea = function(containerObj) {
             vlmAreaObj.height = h;
             vlmAreaObj.position.left = ui.position.left;
             vlmAreaObj.position.top = ui.position.top;
-
         }
     });
 
@@ -431,8 +475,9 @@ vlmMeter.prototype.drawVolumeter = function() {
 var vlmMidi = function(containerObj) {
     this.obj = containerObj;
     this.outPorts = ["No ports found. Connect an output and restart Volumetric"];
-    this.CC = 0;
-    this.channel = 1;
+    this.port = "";
+    this.CC = this.obj.index;
+    this.channel = 1
     this.midiValue = 0;
     this.port = 0;
     this.midiSuccess = false;
@@ -445,6 +490,7 @@ var vlmMidi = function(containerObj) {
     $(this.obj.cssId).find("#midiPorts").selectmenu();      
 }
 
+//Triggered when midi connection is successful
 vlmMidi.prototype.onMIDISuccess = function( midiAccess ) {
     console.log( "MIDI ready!" );
     this.outPorts = this.getOutputsList(midiAccess);
@@ -477,7 +523,7 @@ vlmMidi.prototype.updateDropdown = function() {
     var output = [];
     $.each(this.outPorts, function(key, value)
     {
-      output.push('<option value="'+ key +'">'+ value.name +'</option>');
+      output.push('<option value="'+ value.name +'">'+ value.name +'</option>');
     });
     $(this.obj.cssId).find('#midiPorts').html(output.join(''));
     $(this.obj.cssId).find('#midiPorts').val(0);
@@ -485,7 +531,7 @@ vlmMidi.prototype.updateDropdown = function() {
 
     $(this.obj.cssId).find( "#midiPorts").on( "selectmenuchange", function() {
         console.log("port change", $( this ).val());
-        this.port = parseInt($( this ).val());
+        this.port = $( this ).val();
     });
 }
 
@@ -545,7 +591,7 @@ vlmOsc = function(containerObj) {
     this.port1 = "8000";
     this.ip2 = "192.168.1.12";
     this.port2 = "1234";
-    this.address = "/volumetric";
+    this.address = "/volumetric" + this.obj.index;
     this.oscValue = 0;
 
     var vlmOscObj = this;

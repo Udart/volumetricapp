@@ -8,6 +8,10 @@ body {
     color: #aaa;
 }
 
+#originalObject {
+    display:none;
+}
+
 a, a:visited {
     color:#fff;
 }
@@ -186,7 +190,7 @@ input {
     display: none;
 }
 
-#plus {
+.plusone {
     width: 18px;
     height: 18px;
     background: url("images/plusminus.png") 0px 0px no-repeat;
@@ -194,5 +198,17 @@ input {
     margin-top: 15px;
     padding-left: 24px;
     padding-top: 2px;
+    cursor: pointer;
+    display:none;
 }
 
+#close {
+     background: url("images/plusminus.png") 34px -43px no-repeat;
+     position:absolute;
+     left: 1064px;
+     height: 18px;
+     width: 55px;
+     padding-top: 2px;
+     z-index: 1;
+    cursor: pointer;
+}
