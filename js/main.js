@@ -170,8 +170,8 @@ vlmObject.prototype.disableOscFromWebVersion = function() {
     if (typeof require == "function") {
         this.osc = new vlmOsc(this);
     } else {
-        $("#oscContainer").css("display", "none");
-        $("#oscInfoContainer").css("display", "block");
+        $(".oscContainer").hide();
+        $(".oscInfoContainer").show();
     }
 }
 

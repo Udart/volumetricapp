@@ -67,7 +67,7 @@
                         </table>
                         <div id="midiValue"></div>
                     </div>
-                    <div id="oscContainer">
+                    <div class="oscContainer">
                          <table class="fieldsWLabels">
                             <tr>
                                 <td>OSC IP 1:</td>  
@@ -92,7 +92,7 @@
                        </table>
                         <div id="oscValue"></div>
                     </div>
-                    <div id="oscInfoContainer">OSC output is not available in the web version. Get OSC by downloading the free app. <a href="http://udart.dk/portfolio/volumetric/" target="_blank">More information</a></div>
+                    <div class="oscInfoContainer">OSC output is not available in the web version. Get OSC by downloading the free app. <a href="http://udart.dk/portfolio/volumetric/" target="_blank">More information</a></div>
                 </div>
             </div>
             <div class="plusone">Add</div>
@@ -114,14 +114,6 @@
             ga('create', 'UA-51025809-3', 'auto');
             ga('send', 'pageview');
 
-
-            if (require == "function") {
-                var dimensionValue = 'nwjs-app';
-                ga('set', 'dimension1', dimensionValue);
-            } else {
-                var dimensionValue = 'online';
-                ga('set', 'dimension2', dimensionValue);
-            }
         </script>
     </body>
 </html>
