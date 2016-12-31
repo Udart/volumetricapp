@@ -536,6 +536,8 @@ vlmMidi.prototype.updateDropdown = function() {
 }
 
 vlmMidi.prototype.buildChannelDropdown = function() {
+    var vlmMidiObj = this;
+    
     var output = [];
     for (var i = 1; i<=16; i++) {
         output.push('<option value="'+ i +'">'+ i +'</option>');
@@ -547,7 +549,7 @@ vlmMidi.prototype.buildChannelDropdown = function() {
     $(this.obj.cssId).find('#midiChannels').selectmenu("refresh");
 
     $(this.obj.cssId).find( "#midiChannels").on( "selectmenuchange", function() {
-        this.channel = parseInt($( this ).val());
+        vlmMidiObj.channel = parseInt($( this ).val());
     });
 }
 
